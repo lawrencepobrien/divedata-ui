@@ -1,0 +1,37 @@
+# dependencies
+/node_modules
+/jspm_packages
+
+# production
+/build
+/dist
+/public
+
+# testing
+/coverage
+
+# misc
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.cache
+.eslintcache
+
+# typescript
+# ignore the generated JavaScript files
+*.js.map
+*.d.ts.map
+# If you don't commit the compiled output, ignore the .js and .d.ts files in the same directory as the .ts source
+# For most modern React/TS setups (like Vite, Create React App), this is handled by the build process, 
+# so you usually only need to ignore the build output directory (/build or /dist) above. 
+# The following lines are more relevant for a library setup where .js files might sit next to .ts files:
+# *.js
+# *.d.ts 
+
+# IDEs and other tools
+.idea/         # Visual Studio Code / WebStorm
+.vscode/
