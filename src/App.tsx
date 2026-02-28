@@ -1,8 +1,8 @@
 import './App.css'
 
-import LandingPage from './landing/LandingPage.jsx';
+import LandingPage from './landing/LandingPage';
 
-function App() {
+function App(): JSX.Element {
   return (
     <>
       <LandingPage />
