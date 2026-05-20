@@ -1,13 +1,17 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+import keycloak from '../auth/keycloak';
+
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('access_token');
+  if (keycloak.authenticated) {
+    await keycloak.updateToken(30).catch(() => keycloak.login());
+  }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {}),
       ...options.headers,
     },
   });
@@ -26,5 +30,7 @@ export const client = {
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
