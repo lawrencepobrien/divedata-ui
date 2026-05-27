@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Diver } from '../types/diver';
 
 interface Props {
@@ -29,6 +30,13 @@ function DiverDashboard({ diver, onSignOut }: Props): JSX.Element {
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-bold mb-1">Welcome back, {diver.name}</h2>
         <p className="text-slate-400 mb-8">Your diver dashboard is coming soon.</p>
+
+        <Link
+          to="/profile"
+          className="inline-block mb-8 text-sm text-cyan-400 hover:text-cyan-300 transition duration-150"
+        >
+          View my profile →
+        </Link>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[

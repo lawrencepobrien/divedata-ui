@@ -1,15 +1,21 @@
 import './App.css';
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import keycloak from './auth/keycloak';
-import { meApi } from './api/me';
-import { User } from './types/user';
+import { profileApi } from './api/profile';
+import { Profile } from './types/profile';
 import LandingPage from './landing/LandingPage';
+import ProfileSetup from './pages/ProfileSetup';
+import DiverDashboard from './pages/DiverDashboard';
+import CoachDashboard from './pages/CoachDashboard';
+import DiverProfile from './pages/DiverProfile';
 
-type AppState = 'loading' | 'unauthenticated' | 'authenticated';
+type AppState = 'loading' | 'unauthenticated' | 'needs-setup' | 'authenticated';
 
 function App(): JSX.Element {
   const [appState, setAppState] = useState<AppState>('loading');
-  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     keycloak
@@ -22,16 +28,28 @@ function App(): JSX.Element {
           setAppState('unauthenticated');
           return;
         }
-        const me = await meApi.get();
-        setUser(me);
-        setAppState('authenticated');
+        const p = await profileApi.get();
+        if (!p.type) {
+          setAppState('needs-setup');
+          navigate('/setup');
+        } else {
+          setProfile(p);
+          setAppState('authenticated');
+          navigate('/dashboard');
+        }
       })
       .catch(() => setAppState('unauthenticated'));
   }, []);
 
   const handleSignOut = () => {
-    setUser(null);
+    setProfile(null);
     keycloak.logout();
+  };
+
+  const handleProfileComplete = (p: Profile) => {
+    setProfile(p);
+    setAppState('authenticated');
+    navigate('/dashboard');
   };
 
   if (appState === 'loading') {
@@ -42,31 +60,47 @@ function App(): JSX.Element {
     );
   }
 
-  if (appState === 'unauthenticated') {
-    return <LandingPage />;
-  }
-
-  // Authenticated — dashboard goes here
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <nav className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <span className="text-lg font-bold">
-          Dive<span className="text-cyan-400">Data</span>
-        </span>
-        <div className="flex items-center gap-4">
-          <span className="text-slate-400 text-sm">{user?.full_name}</span>
-          <button
-            onClick={handleSignOut}
-            className="text-slate-400 hover:text-slate-200 text-sm transition duration-150 cursor-pointer"
-          >
-            Sign out
-          </button>
-        </div>
-      </nav>
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <p className="text-slate-400">Welcome back, {user?.full_name}.</p>
-      </div>
-    </div>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          appState === 'unauthenticated'
+            ? <LandingPage />
+            : <Navigate to="/dashboard" replace />
+        }
+      />
+      <Route
+        path="/setup"
+        element={
+          appState === 'needs-setup'
+            ? <ProfileSetup onComplete={handleProfileComplete} />
+            : <Navigate to="/dashboard" replace />
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          appState === 'unauthenticated' ? <Navigate to="/" replace /> :
+          appState === 'needs-setup' ? <Navigate to="/setup" replace /> :
+          profile?.type === 'diver'
+            ? <DiverDashboard diver={profile.diver!} onSignOut={handleSignOut} />
+            : <CoachDashboard coach={profile.coach!} onSignOut={handleSignOut} />
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          appState !== 'authenticated' || profile?.type !== 'diver'
+            ? <Navigate to="/dashboard" replace />
+            : <DiverProfile
+                diver={profile.diver!}
+                onSignOut={handleSignOut}
+                onBack={() => navigate('/dashboard')}
+              />
+        }
+      />
+    </Routes>
   );
 }
 
