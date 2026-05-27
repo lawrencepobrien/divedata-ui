@@ -22,6 +22,7 @@ function App(): JSX.Element {
       .init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+        checkLoginIframe: false,
       })
       .then(async (authenticated) => {
         if (!authenticated) {
