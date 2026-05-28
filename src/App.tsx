@@ -4,13 +4,12 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import keycloak from './auth/keycloak';
 import { profileApi } from './api/profile';
 import { Profile } from './types/profile';
+import Layout from './components/Layout';
 import LandingPage from './landing/LandingPage';
-import ProfileSetup from './pages/ProfileSetup';
-import DiverDashboard from './pages/DiverDashboard';
-import CoachDashboard from './pages/CoachDashboard';
 import DiverProfile from './pages/DiverProfile';
+import ProfileSetup from './pages/ProfileSetup';
 
-type AppState = 'loading' | 'unauthenticated' | 'needs-setup' | 'authenticated';
+type AppState = 'loading' | 'unauthenticated' | 'authenticated';
 
 function App(): JSX.Element {
   const [appState, setAppState] = useState<AppState>('loading');
@@ -29,15 +28,14 @@ function App(): JSX.Element {
           setAppState('unauthenticated');
           return;
         }
-        const p = await profileApi.get();
-        if (!p.type) {
-          setAppState('needs-setup');
-          navigate('/setup');
-        } else {
+        try {
+          const p = await profileApi.get();
           setProfile(p);
-          setAppState('authenticated');
-          navigate('/dashboard');
+        } catch {
+          // No profile yet — that's fine, pages will handle it
         }
+        setAppState('authenticated');
+        navigate('/dashboard');
       })
       .catch(() => setAppState('unauthenticated'));
   }, []);
@@ -49,8 +47,7 @@ function App(): JSX.Element {
 
   const handleProfileComplete = (p: Profile) => {
     setProfile(p);
-    setAppState('authenticated');
-    navigate('/dashboard');
+    navigate('/profile');
   };
 
   if (appState === 'loading') {
@@ -72,33 +69,47 @@ function App(): JSX.Element {
         }
       />
       <Route
-        path="/setup"
-        element={
-          appState === 'needs-setup'
-            ? <ProfileSetup onComplete={handleProfileComplete} />
-            : <Navigate to="/dashboard" replace />
-        }
-      />
-      <Route
         path="/dashboard"
         element={
-          appState === 'unauthenticated' ? <Navigate to="/" replace /> :
-          appState === 'needs-setup' ? <Navigate to="/setup" replace /> :
-          profile?.type === 'diver'
-            ? <DiverDashboard diver={profile.diver!} onSignOut={handleSignOut} />
-            : <CoachDashboard coach={profile.coach!} onSignOut={handleSignOut} />
+          appState === 'unauthenticated'
+            ? <Navigate to="/" replace />
+            : <Layout onSignOut={handleSignOut}>
+                <p className="text-slate-400">Welcome back.</p>
+              </Layout>
         }
       />
       <Route
         path="/profile"
         element={
-          appState !== 'authenticated' || profile?.type !== 'diver'
-            ? <Navigate to="/dashboard" replace />
-            : <DiverProfile
-                diver={profile.diver!}
-                onSignOut={handleSignOut}
-                onBack={() => navigate('/dashboard')}
-              />
+          appState === 'unauthenticated'
+            ? <Navigate to="/" replace />
+            : <Layout onSignOut={handleSignOut}>
+                {profile?.diver
+                  ? <DiverProfile diver={profile.diver} />
+                  : <div className="flex flex-col items-start gap-4">
+                      <div>
+                        <h2 className="text-xl font-semibold mb-1">No profile yet</h2>
+                        <p className="text-slate-400 text-sm">Create a profile to get started.</p>
+                      </div>
+                      <button
+                        onClick={() => navigate('/setup')}
+                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-lg px-5 py-2.5 text-sm transition duration-150 cursor-pointer"
+                      >
+                        Create profile
+                      </button>
+                    </div>
+                }
+              </Layout>
+        }
+      />
+      <Route
+        path="/setup"
+        element={
+          appState === 'unauthenticated'
+            ? <Navigate to="/" replace />
+            : <Layout onSignOut={handleSignOut}>
+                <ProfileSetup onComplete={handleProfileComplete} />
+              </Layout>
         }
       />
     </Routes>

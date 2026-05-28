@@ -14,31 +14,25 @@ function ProfileSetup({ onComplete }: Props): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Diver form fields
-  const [diverName, setDiverName] = useState('');
   const [diverAge, setDiverAge] = useState('');
   const [diverFinaAge, setDiverFinaAge] = useState('');
   const [diverGender, setDiverGender] = useState('');
   const [diverCountry, setDiverCountry] = useState('');
   const [diverCity, setDiverCity] = useState('');
 
-  // Coach form fields
-  const [coachName, setCoachName] = useState('');
-
   const handleCreateDiver = async () => {
     setError(null);
     setLoading(true);
     try {
       const body: CreateDiverRequest = {
-        name: diverName,
         age: parseInt(diverAge) || 0,
         fina_age: parseInt(diverFinaAge) || 0,
         gender: diverGender,
         country: diverCountry,
         city: diverCity,
       };
-      const diver = await profileApi.createDiver(body);
-      onComplete({ type: 'diver', diver });
+      const profile = await profileApi.createDiver(body);
+      onComplete(profile);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
@@ -50,8 +44,8 @@ function ProfileSetup({ onComplete }: Props): JSX.Element {
     setError(null);
     setLoading(true);
     try {
-      const coach = await profileApi.createCoach({ name: coachName });
-      onComplete({ type: 'coach', coach });
+      const profile = await profileApi.createCoach();
+      onComplete(profile);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
@@ -60,114 +54,104 @@ function ProfileSetup({ onComplete }: Props): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="max-w-md">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-1">Set up your profile</h2>
+        <p className="text-slate-400 text-sm">Choose how you'll be using DiveData.</p>
+      </div>
 
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">
-            Dive<span className="text-cyan-400">Data</span>
-          </h1>
-          <p className="text-slate-400 text-sm mt-2">Set up your profile</p>
-        </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl shadow-black/40">
+        {step === 'choose' && (
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setStep('diver-form')}
+              className="group flex flex-col gap-1 border border-slate-700 hover:border-cyan-500
+                         rounded-xl p-5 text-left transition duration-150 cursor-pointer"
+            >
+              <span className="text-slate-100 font-semibold group-hover:text-cyan-400 transition duration-150">
+                I'm a Diver
+              </span>
+              <span className="text-slate-500 text-sm">
+                Track your dives, scores, and competition history
+              </span>
+            </button>
 
-          {step === 'choose' && (
-            <div className="flex flex-col gap-4">
-              <p className="text-slate-300 text-center text-sm mb-2">
-                How will you be using DiveData?
-              </p>
+            <button
+              onClick={() => setStep('coach-form')}
+              className="group flex flex-col gap-1 border border-slate-700 hover:border-cyan-500
+                         rounded-xl p-5 text-left transition duration-150 cursor-pointer"
+            >
+              <span className="text-slate-100 font-semibold group-hover:text-cyan-400 transition duration-150">
+                I'm a Coach
+              </span>
+              <span className="text-slate-500 text-sm">
+                Manage your team's roster, meets, and dive sheets
+              </span>
+            </button>
+          </div>
+        )}
 
-              <button
-                onClick={() => setStep('diver-form')}
-                className="group flex flex-col gap-1 border border-slate-700 hover:border-cyan-500
-                           rounded-xl p-5 text-left transition duration-150 cursor-pointer"
-              >
-                <span className="text-slate-100 font-semibold group-hover:text-cyan-400 transition duration-150">
-                  I'm a Diver
-                </span>
-                <span className="text-slate-500 text-sm">
-                  Track your dives, scores, and competition history
-                </span>
-              </button>
+        {step === 'diver-form' && (
+          <div className="flex flex-col gap-5">
+            <button
+              onClick={() => { setStep('choose'); setError(null); }}
+              className="text-slate-500 hover:text-slate-300 text-sm text-left transition duration-150 cursor-pointer"
+            >
+              ← Back
+            </button>
+            <p className="text-slate-300 font-medium">Diver details</p>
 
-              <button
-                onClick={() => setStep('coach-form')}
-                className="group flex flex-col gap-1 border border-slate-700 hover:border-cyan-500
-                           rounded-xl p-5 text-left transition duration-150 cursor-pointer"
-              >
-                <span className="text-slate-100 font-semibold group-hover:text-cyan-400 transition duration-150">
-                  I'm a Coach
-                </span>
-                <span className="text-slate-500 text-sm">
-                  Manage your team's roster, meets, and dive sheets
-                </span>
-              </button>
+            <div className="grid grid-cols-2 gap-4">
+              <TextInput label="Age" type="number" onChange={(e) => setDiverAge(e.target.value)} />
+              <TextInput label="FINA age" type="number" onChange={(e) => setDiverFinaAge(e.target.value)} />
             </div>
-          )}
 
-          {step === 'diver-form' && (
-            <div className="flex flex-col gap-5">
-              <button
-                onClick={() => { setStep('choose'); setError(null); }}
-                className="text-slate-500 hover:text-slate-300 text-sm text-left transition duration-150 cursor-pointer"
-              >
-                ← Back
-              </button>
-              <p className="text-slate-300 font-medium">Diver details</p>
+            <TextInput label="Gender" onChange={(e) => setDiverGender(e.target.value)} />
+            <TextInput label="Country" onChange={(e) => setDiverCountry(e.target.value)} />
+            <TextInput label="City" onChange={(e) => setDiverCity(e.target.value)} />
 
-              <TextInput label="Full name" onChange={(e) => setDiverName(e.target.value)} />
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
-              <div className="grid grid-cols-2 gap-4">
-                <TextInput label="Age" type="number" onChange={(e) => setDiverAge(e.target.value)} />
-                <TextInput label="FINA age" type="number" onChange={(e) => setDiverFinaAge(e.target.value)} />
-              </div>
+            <button
+              onClick={handleCreateDiver}
+              disabled={loading}
+              className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-800 disabled:cursor-not-allowed
+                         text-slate-950 font-semibold rounded-lg py-2.5 text-sm
+                         transition duration-150 cursor-pointer"
+            >
+              {loading ? 'Creating profile…' : 'Create diver profile'}
+            </button>
+          </div>
+        )}
 
-              <TextInput label="Gender" onChange={(e) => setDiverGender(e.target.value)} />
-              <TextInput label="Country" onChange={(e) => setDiverCountry(e.target.value)} />
-              <TextInput label="City" onChange={(e) => setDiverCity(e.target.value)} />
+        {step === 'coach-form' && (
+          <div className="flex flex-col gap-5">
+            <button
+              onClick={() => { setStep('choose'); setError(null); }}
+              className="text-slate-500 hover:text-slate-300 text-sm text-left transition duration-150 cursor-pointer"
+            >
+              ← Back
+            </button>
+            <p className="text-slate-300 font-medium">Coach details</p>
+            <p className="text-slate-500 text-sm">
+              Your name is taken from your account automatically.
+            </p>
 
-              {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
-              <button
-                onClick={handleCreateDiver}
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-800 disabled:cursor-not-allowed
-                           text-slate-950 font-semibold rounded-lg py-2.5 text-sm
-                           transition duration-150 cursor-pointer"
-              >
-                {loading ? 'Creating profile…' : 'Create diver profile'}
-              </button>
-            </div>
-          )}
+            <button
+              onClick={handleCreateCoach}
+              disabled={loading}
+              className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-800 disabled:cursor-not-allowed
+                         text-slate-950 font-semibold rounded-lg py-2.5 text-sm
+                         transition duration-150 cursor-pointer"
+            >
+              {loading ? 'Creating profile…' : 'Create coach profile'}
+            </button>
+          </div>
+        )}
 
-          {step === 'coach-form' && (
-            <div className="flex flex-col gap-5">
-              <button
-                onClick={() => { setStep('choose'); setError(null); }}
-                className="text-slate-500 hover:text-slate-300 text-sm text-left transition duration-150 cursor-pointer"
-              >
-                ← Back
-              </button>
-              <p className="text-slate-300 font-medium">Coach details</p>
-
-              <TextInput label="Full name" onChange={(e) => setCoachName(e.target.value)} />
-
-              {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
-              <button
-                onClick={handleCreateCoach}
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-800 disabled:cursor-not-allowed
-                           text-slate-950 font-semibold rounded-lg py-2.5 text-sm
-                           transition duration-150 cursor-pointer"
-              >
-                {loading ? 'Creating profile…' : 'Create coach profile'}
-              </button>
-            </div>
-          )}
-
-        </div>
       </div>
     </div>
   );

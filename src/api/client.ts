@@ -17,8 +17,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || res.statusText);
+    const message = await res.text();
+    const error = new Error(message || res.statusText) as Error & { status: number };
+    error.status = res.status;
+    throw error;
   }
 
   return res.json() as Promise<T>;

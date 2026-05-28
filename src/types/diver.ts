@@ -62,8 +62,8 @@ export interface DiveSheet {
 }
 
 export interface Diver {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   name: string;
   dives: Dive[];
   age: number;
