@@ -1,41 +1,32 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import keycloak from './auth/keycloak';
-import { meApi } from './api/me';
-import { User } from './types/user';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import keycloak, { initKeycloak } from './auth/keycloak';
 import LandingPage from './landing/LandingPage';
+import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+import { useMe } from './hooks/useMe';
+import { Sidebar, SidebarLayout } from './components/Sidebar';
 
-type AppState = 'loading' | 'unauthenticated' | 'authenticated';
+type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
 
 function App(): JSX.Element {
-  const [appState, setAppState] = useState<AppState>('loading');
-  const [user, setUser] = useState<User | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    keycloak
-      .init({
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-        checkLoginIframe: false,
-      })
-      .then(async (authenticated) => {
-        if (!authenticated) {
-          setAppState('unauthenticated');
-          return;
-        }
-        const me = await meApi.get();
-        setUser(me);
-        setAppState('authenticated');
-      })
-      .catch(() => setAppState('unauthenticated'));
+    initKeycloak()
+      .then((authenticated) => setAuthStatus(authenticated ? 'authenticated' : 'unauthenticated'))
+      .catch(() => setAuthStatus('unauthenticated'));
   }, []);
 
-  const handleSignOut = () => {
-    setUser(null);
-    keycloak.logout();
-  };
+  // Server state: the user record. Only runs once Keycloak confirms the session.
+  const { data: user } = useMe(authStatus === 'authenticated');
 
-  if (appState === 'loading') {
+  const handleSignOut = () => keycloak.logout();
+
+  if (authStatus === 'loading') {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <p className="text-slate-500 text-sm">Loading…</p>
@@ -43,19 +34,29 @@ function App(): JSX.Element {
     );
   }
 
-  if (appState === 'unauthenticated') {
+  if (authStatus === 'unauthenticated') {
     return <LandingPage />;
   }
 
-  // Authenticated — dashboard goes here
+  const navItems = [
+    { label: 'Overview', to: '/', active: pathname === '/' },
+    { label: 'Profile', to: '/profile/me', active: pathname.startsWith('/profile') },
+    { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <nav className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <span className="text-lg font-bold">
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100">
+      <nav className="shrink-0 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <button onClick={() => navigate('/')} className="text-lg font-bold cursor-pointer">
           Dive<span className="text-cyan-400">Data</span>
-        </span>
+        </button>
         <div className="flex items-center gap-4">
-          <span className="text-slate-400 text-sm">{user?.full_name}</span>
+          <button
+            onClick={() => navigate('/settings')}
+            className="text-slate-400 hover:text-slate-200 text-sm transition duration-150 cursor-pointer"
+          >
+            {user?.full_name}
+          </button>
           <button
             onClick={handleSignOut}
             className="text-slate-400 hover:text-slate-200 text-sm transition duration-150 cursor-pointer"
@@ -64,9 +65,41 @@ function App(): JSX.Element {
           </button>
         </div>
       </nav>
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <p className="text-slate-400">Welcome back, {user?.full_name}.</p>
-      </div>
+
+      <SidebarLayout
+        className="flex-1 min-h-0"
+        left={
+          <Sidebar side="left" title="Navigation" defaultWidth={15} storageKey="divedata.sidebar.left.rem">
+            <nav className="p-3 space-y-1 text-sm">
+              {navItems.map(({ label, to, active }) => (
+                <button
+                  key={label}
+                  onClick={() => navigate(to)}
+                  className={`block w-full text-left px-3 py-2 rounded-lg transition duration-150 cursor-pointer ${
+                    active ? 'bg-slate-800 text-cyan-400' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </Sidebar>
+        }
+      >
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div className="max-w-4xl mx-auto px-6 py-12">
+                <h2 className="text-2xl font-bold mb-1">Welcome back, {user?.full_name}.</h2>
+              </div>
+            }
+          />
+          <Route path="/profile/:id" element={<Profile />} />
+          <Route path="/settings" element={<Settings user={user ?? null} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </SidebarLayout>
     </div>
   );
 }

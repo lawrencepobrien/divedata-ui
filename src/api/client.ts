@@ -2,6 +2,16 @@ import keycloak from '../auth/keycloak';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
+/** Error carrying the HTTP status, so callers (and React Query's retry) can branch on it. */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (keycloak.authenticated) {
     await keycloak.updateToken(30).catch(() => keycloak.login());
@@ -17,8 +27,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || res.statusText);
+    const body = await res.text();
+    throw new ApiError(res.status, body || res.statusText);
   }
 
   return res.json() as Promise<T>;

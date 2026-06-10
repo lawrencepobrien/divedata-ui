@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { diversApi } from '../api/diver';
 import { Diver } from '../types/diver';
 
+export const diverKeys = {
+  byId: (id: number) => ['diver', id] as const,
+};
+
 export function useDiver(id: number) {
-  const [diver, setDiver] = useState<Diver | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    diversApi.getById(id)
-      .then(setDiver)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  return { diver, loading, error };
+  return useQuery<Diver>({
+    queryKey: diverKeys.byId(id),
+    queryFn: () => diversApi.getById(id),
+    enabled: Number.isFinite(id),
+  });
 }
