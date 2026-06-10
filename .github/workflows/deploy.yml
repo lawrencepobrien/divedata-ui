@@ -1,8 +1,8 @@
 name: Build and Deploy
 
+# Automatic CI/CD disabled — runs only when triggered manually.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
