@@ -1,14 +1,112 @@
-import { Diver } from '../types/diver';
+import { useState } from 'react';
+import type { DiverProfile } from '../types/profile';
+import type { Discipline, BoardType } from '../types/trendline';
+import { useEventTrendline, useDiveTrendline, useDiverStats } from '../hooks/useDiver';
+import { TrendlineChart } from '../components/charts/TrendlineChart';
+
+type Tab = 'profile' | 'statistics';
+
+const DISCIPLINES: { value: Discipline; label: string }[] = [
+  { value: '1m', label: '1m' },
+  { value: '3m', label: '3m' },
+  { value: 'platform', label: 'Platform' },
+];
 
 interface Props {
-  diver: Diver;
+  diver: DiverProfile;
+}
+
+function StatisticsTab({ diverId }: { diverId: string }) {
+  const [discipline, setDiscipline] = useState<Discipline>('platform');
+  const [selectedDive, setSelectedDive] = useState<string>('');
+
+  const { data: eventPoints = [], isLoading: loadingEvent } = useEventTrendline(diverId, discipline);
+  const { data: stats } = useDiverStats(diverId);
+
+  const diveOptions = stats?.competition ?? [];
+  const parsedDive = selectedDive
+    ? { diveCode: selectedDive.split('|')[0], board: selectedDive.split('|')[1] as BoardType }
+    : null;
+
+  const { data: divePoints = [], isLoading: loadingDive } = useDiveTrendline(
+    diverId,
+    parsedDive?.diveCode ?? null,
+    parsedDive?.board ?? null,
+  );
+
+  return (
+    <div className="space-y-8">
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Event Trendline</h2>
+          <div className="flex gap-1">
+            {DISCIPLINES.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setDiscipline(value)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition duration-150 cursor-pointer ${
+                  discipline === value
+                    ? 'bg-cyan-500 text-slate-950'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          {loadingEvent ? (
+            <div className="flex items-center justify-center h-60 text-slate-500 text-sm">Loading…</div>
+          ) : (
+            <TrendlineChart points={eventPoints} height={240} />
+          )}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Dive Trendline</h2>
+          <select
+            value={selectedDive}
+            onChange={(e) => setSelectedDive(e.target.value)}
+            className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          >
+            <option value="">Select a dive…</option>
+            {diveOptions.map((entry) => (
+              <option key={`${entry.dive_code}|${entry.board}`} value={`${entry.dive_code}|${entry.board}`}>
+                {entry.dive_code} · {entry.board} ({entry.dive_count} dives, avg {entry.avg_score.toFixed(2)})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          {!selectedDive ? (
+            <div className="flex items-center justify-center h-60 text-slate-500 text-sm">
+              Select a dive above to see its trendline
+            </div>
+          ) : loadingDive ? (
+            <div className="flex items-center justify-center h-60 text-slate-500 text-sm">Loading…</div>
+          ) : (
+            <TrendlineChart points={divePoints} height={240} />
+          )}
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function DiverProfile({ diver }: Props): JSX.Element {
+  const [tab, setTab] = useState<Tab>('profile');
+
+  const tabs: { value: Tab; label: string }[] = [
+    { value: 'profile', label: 'Profile' },
+    ...(diver.diver_id ? [{ value: 'statistics' as Tab, label: 'Statistics' }] : []),
+  ];
+
   return (
     <div className="max-w-4xl">
-
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold mb-1">{diver.name}</h1>
         {(diver.city || diver.country) && (
           <p className="text-slate-400 text-sm">
@@ -17,108 +115,41 @@ function DiverProfile({ diver }: Props): JSX.Element {
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-        {[
-          { label: 'Age', value: diver.age ? String(diver.age) : '—' },
-          { label: 'FINA Age', value: diver.fina_age ? String(diver.fina_age) : '—' },
-          { label: 'Gender', value: diver.gender || '—' },
-          { label: 'Country', value: diver.country || '—' },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">{label}</p>
-            <p className="text-slate-100 font-medium">{value}</p>
-          </div>
+      <div className="flex gap-1 mb-8 border-b border-slate-800 pb-0">
+        {tabs.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setTab(value)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition duration-150 cursor-pointer ${
+              tab === value
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold mb-4">Teams</h2>
-        {diver.teams?.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {diver.teams.map((team) => (
-              <div
-                key={team.id}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium">{team.name}</p>
-                  <p className="text-slate-500 text-sm">
-                    {[team.state, team.country].filter(Boolean).join(', ')}
-                  </p>
-                </div>
-                <span className="text-slate-500 text-xs font-mono">{team.code}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-slate-500 text-sm">No teams yet.</p>
-        )}
-      </section>
+      {tab === 'profile' && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Age', value: diver.age ? String(diver.age) : '—' },
+            { label: 'FINA Age', value: diver.fina_age ? String(diver.fina_age) : '—' },
+            { label: 'Gender', value: diver.gender || '—' },
+            { label: 'Country', value: diver.country || '—' },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">{label}</p>
+              <p className="text-slate-100 font-medium">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold mb-4">Dive Repertoire</h2>
-        {diver.dives?.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {diver.dives.map((dive) => (
-              <div
-                key={dive.dive_code}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-sm font-medium">{dive.description}</p>
-                  <p className="text-slate-500 text-xs mt-0.5">
-                    {[dive.direction, dive.position].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-slate-400 text-xs font-mono mb-0.5">{dive.dive_code}</p>
-                  <p className="text-cyan-400 text-sm font-semibold">{dive.dd} DD</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-slate-500 text-sm">No dives added yet.</p>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Competition History</h2>
-        {diver.history?.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {diver.history.map((sheet) => (
-              <div key={sheet.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-medium">{sheet.meet?.name || '—'}</p>
-                    <p className="text-slate-500 text-sm">{sheet.team?.name || '—'}</p>
-                  </div>
-                  {sheet.meet?.start_date && (
-                    <p className="text-slate-500 text-xs">
-                      {new Date(sheet.meet.start_date).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-                {sheet.dive_scores?.length > 0 && (
-                  <div className="flex flex-col gap-1 border-t border-slate-800 pt-3 mt-1">
-                    {sheet.dive_scores.map((ds, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-slate-400 text-xs">{ds.dive.description}</span>
-                        <span className="text-cyan-400 text-sm font-medium">
-                          {ds.total_score.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-slate-500 text-sm">No competition history yet.</p>
-        )}
-      </section>
-
+      {tab === 'statistics' && diver.diver_id && (
+        <StatisticsTab diverId={diver.diver_id} />
+      )}
     </div>
   );
 }
