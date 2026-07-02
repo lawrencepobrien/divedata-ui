@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 // Dev proxy target: the nginx fronting the API/Keycloak stack. Override with the
 // API_TARGET env var if your backend runs elsewhere. `secure: false` because the
 // proxy serves a self-signed cert in dev.
-const apiTarget = process.env.API_TARGET ?? 'https://192.168.1.167'
+const apiTarget = process.env.API_TARGET ?? 'https://divedata.duckdns.org'
 
 export default defineConfig({
   server: {

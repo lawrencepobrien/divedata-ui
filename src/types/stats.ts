@@ -18,7 +18,9 @@ export interface CompStatEntry {
   avg_score: number;
   min_score: number;
   max_score: number;
+  q1_score: number;
   median_score: number;
+  q3_score: number;
 }
 
 export interface DiverStats {
