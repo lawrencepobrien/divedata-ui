@@ -8,6 +8,11 @@ import { useMe } from './hooks/useMe';
 import LandingPage from './landing/LandingPage';
 import Settings from './pages/Settings';
 import DiverProfile from './pages/DiverProfile';
+import HistoryPage from './pages/HistoryPage';
+import StatisticsPage from './pages/StatisticsPage';
+import DiveDetailPage from './pages/DiveDetailPage';
+import CompetitionDetailPage from './pages/CompetitionDetailPage';
+import LogTrainingDivePage from './pages/LogTrainingDivePage';
 import ProfileSetup from './pages/ProfileSetup';
 import { Sidebar, SidebarLayout } from './components/Sidebar';
 
@@ -17,7 +22,6 @@ interface NavItem {
   label: string;
   to: string;
   active: boolean;
-  indent?: boolean;
 }
 
 function App(): JSX.Element {
@@ -60,7 +64,6 @@ function App(): JSX.Element {
     return <LandingPage />;
   }
 
-  const onProfilePage = pathname.startsWith('/profile');
   const hasDiver = !!profile?.diver?.diver_id;
 
   const navItems: NavItem[] = [
@@ -70,19 +73,17 @@ function App(): JSX.Element {
       to: '/profile/me',
       active: pathname === '/profile/me',
     },
-    ...(onProfilePage && hasDiver
+    ...(hasDiver
       ? [
           {
             label: 'History',
             to: '/profile/me/history',
-            active: pathname === '/profile/me/history',
-            indent: true,
+            active: pathname.startsWith('/profile/me/history'),
           },
           {
             label: 'Statistics',
             to: '/profile/me/statistics',
-            active: pathname === '/profile/me/statistics',
-            indent: true,
+            active: pathname.startsWith('/profile/me/statistics'),
           },
         ]
       : []),
@@ -133,17 +134,13 @@ function App(): JSX.Element {
         left={
           <Sidebar side="left" title="Navigation" defaultWidth={15} storageKey="divedata.sidebar.left.rem">
             <nav className="p-3 space-y-0.5 text-sm">
-              {navItems.map(({ label, to, active, indent }) => (
+              {navItems.map(({ label, to, active }) => (
                 <button
                   key={to}
                   onClick={() => navigate(to)}
-                  className={`block w-full text-left rounded-lg transition duration-150 cursor-pointer ${
-                    indent ? 'pl-6 pr-3 py-1.5 text-xs' : 'px-3 py-2'
-                  } ${
+                  className={`block w-full text-left rounded-lg px-3 py-2 transition duration-150 cursor-pointer ${
                     active
                       ? 'bg-slate-800 text-cyan-400'
-                      : indent
-                      ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                       : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
@@ -168,8 +165,28 @@ function App(): JSX.Element {
             element={<div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>}
           />
           <Route
-            path="/profile/:id/:section"
-            element={<div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>}
+            path="/profile/me/history"
+            element={
+              hasDiver
+                ? <HistoryPage diverId={profile!.diver!.diver_id} />
+                : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
+            }
+          />
+          <Route
+            path="/profile/me/statistics"
+            element={
+              hasDiver
+                ? <StatisticsPage diverId={profile!.diver!.diver_id} />
+                : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
+            }
+          />
+          <Route
+            path="/profile/me/training/new"
+            element={
+              hasDiver
+                ? <LogTrainingDivePage diverId={profile!.diver!.diver_id} />
+                : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
+            }
           />
           <Route
             path="/setup"
@@ -178,6 +195,14 @@ function App(): JSX.Element {
                 <ProfileSetup onComplete={handleProfileComplete} />
               </div>
             }
+          />
+          <Route
+            path="/profile/:diverId/dives/:source/:scoreId"
+            element={<div className="max-w-4xl mx-auto"><DiveDetailPage /></div>}
+          />
+          <Route
+            path="/profile/:diverId/competitions/:competitionId"
+            element={<div className="max-w-4xl mx-auto"><CompetitionDetailPage /></div>}
           />
           <Route path="/settings" element={<Settings user={user ?? null} />} />
           <Route path="*" element={<Navigate to="/" replace />} />

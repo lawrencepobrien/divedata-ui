@@ -1,7 +1,7 @@
 import type { BoardType } from './trendline';
 
 export interface TrainingStatEntry {
-  dive_type_id: string;
+  dive_code: string;
   board: BoardType;
   dive_count: number;
   avg_score: number;
