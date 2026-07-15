@@ -1,6 +1,7 @@
 import type { BoardType, Discipline } from './trendline';
 
 export interface CompDive {
+  id: string;
   dive_code: string;
   board: BoardType;
   total_score: number | null;

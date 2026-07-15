@@ -17,9 +17,18 @@ export interface TrendlineSeries {
   points: TrendlinePoint[];
 }
 
+export interface PointClickInfo {
+  id?: string;
+  date: string | null;
+  label: string;
+  score: number;
+  source?: 'competition' | 'training';
+}
+
 interface Props {
   series: TrendlineSeries[];
   height?: number;
+  onPointClick?: (info: PointClickInfo) => void;
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -43,6 +52,8 @@ function mergeData(series: TrendlineSeries[]): Record<string, unknown>[] {
         });
       }
       rowMap.get(dateKey)![s.key] = pt.score;
+      rowMap.get(dateKey)![`${s.key}__id`] = pt.id ?? null;
+      rowMap.get(dateKey)![`${s.key}__source`] = pt.source ?? null;
     });
   });
 
@@ -111,7 +122,61 @@ function MultiTooltip({
   );
 }
 
-export function TrendlineChart({ series, height = 240 }: Props) {
+// Training points render as a hollow ring in the series color instead of a
+// solid dot — same line, same color, visually distinct marker so a single
+// series can mix training and competition scores without splitting the line.
+const CHART_BG = '#0f172a'; // slate-950, matches the app background the ring "punches through" to
+
+function seriesDot(color: string, seriesKey: string, baseRadius: number) {
+  return (props: any) => {
+    const { cx, cy, index, payload } = props;
+    if (payload?.[seriesKey] == null) return null; // no point for this series at this row — no dot
+    const isTraining = payload?.[`${seriesKey}__source`] === 'training';
+    return (
+      <circle
+        key={`dot-${seriesKey}-${index}`}
+        cx={cx}
+        cy={cy}
+        r={isTraining ? baseRadius + 1 : baseRadius}
+        fill={isTraining ? CHART_BG : color}
+        stroke={color}
+        strokeWidth={isTraining ? 2 : 0}
+      />
+    );
+  };
+}
+
+function seriesActiveDot(color: string, seriesKey: string, baseRadius: number, onClick?: (info: PointClickInfo) => void) {
+  return (props: any) => {
+    const { cx, cy, index, payload } = props;
+    if (payload?.[seriesKey] == null) return null;
+    const isTraining = payload?.[`${seriesKey}__source`] === 'training';
+    return (
+      <circle
+        key={`active-dot-${seriesKey}-${index}`}
+        cx={cx}
+        cy={cy}
+        r={isTraining ? baseRadius + 1 : baseRadius}
+        fill={isTraining ? CHART_BG : color}
+        stroke={color}
+        strokeWidth={isTraining ? 2 : 0}
+        style={onClick ? { cursor: 'pointer' } : undefined}
+        onClick={onClick ? () => onClick({
+          id: payload[`${seriesKey}__id`] as string | undefined,
+          date: payload._date as string | null,
+          label: payload._label as string,
+          score: payload[seriesKey] as number,
+          source: (payload[`${seriesKey}__source`] ?? undefined) as
+            | 'competition'
+            | 'training'
+            | undefined,
+        }) : undefined}
+      />
+    );
+  };
+}
+
+export function TrendlineChart({ series, height = 240, onPointClick }: Props) {
   const hasData = series.some((s) => s.points.length > 0);
 
   if (!hasData) {
@@ -126,38 +191,53 @@ export function TrendlineChart({ series, height = 240 }: Props) {
   }
 
   const data = mergeData(series);
+  const hasTrainingPoints = series.some((s) => s.points.some((pt) => pt.source === 'training'));
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
-        <XAxis
-          dataKey="_displayDate"
-          tick={{ fill: '#64748b', fontSize: 11 }}
-          axisLine={{ stroke: '#1e293b' }}
-          tickLine={false}
-        />
-        <YAxis
-          tick={{ fill: '#64748b', fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-          width={36}
-        />
-        <Tooltip content={<MultiTooltip series={series} />} cursor={{ stroke: '#334155' }} />
-        <Legend content={(props) => <ChartLegend {...(props as any)} series={series} />} />
-        {series.map((s) => (
-          <Line
-            key={s.key}
-            type="monotone"
-            dataKey={s.key}
-            stroke={s.color}
-            strokeWidth={2}
-            dot={{ fill: s.color, r: 3, strokeWidth: 0 }}
-            activeDot={{ fill: s.color, r: 5, strokeWidth: 0 }}
-            connectNulls={true}
+    <div>
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+          <XAxis
+            dataKey="_displayDate"
+            tick={{ fill: '#64748b', fontSize: 11 }}
+            axisLine={{ stroke: '#1e293b' }}
+            tickLine={false}
           />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
+          <YAxis
+            tick={{ fill: '#64748b', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={36}
+          />
+          <Tooltip content={<MultiTooltip series={series} />} cursor={{ stroke: '#334155' }} />
+          <Legend content={(props) => <ChartLegend {...(props as any)} series={series} />} />
+          {series.map((s) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              stroke={s.color}
+              strokeWidth={2}
+              dot={seriesDot(s.color, s.key, 3)}
+              activeDot={seriesActiveDot(s.color, s.key, 5, onPointClick)}
+              connectNulls={true}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+      {hasTrainingPoints && (
+        <div className="flex items-center justify-center gap-4 pt-1 text-xs text-slate-500">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-400" />
+            Competition
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-slate-400" style={{ background: CHART_BG }} />
+            Training
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
