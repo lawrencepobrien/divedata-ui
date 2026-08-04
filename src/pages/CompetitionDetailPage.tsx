@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCompetitionHistory } from '../hooks/useDiver';
+import AddToPortfolioButton from '../components/Portfolio/AddToPortfolioButton';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -20,12 +21,17 @@ export default function CompetitionDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm mb-8 transition-colors cursor-pointer"
-      >
-        ← Back
-      </button>
+      <div className="flex items-center justify-between mb-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm transition-colors cursor-pointer"
+        >
+          ← Back
+        </button>
+        {competition && (
+          <AddToPortfolioButton itemType="competition" itemId={competition.id} />
+        )}
+      </div>
 
       {isLoading && (
         <div className="text-slate-500 text-sm">Loading…</div>
