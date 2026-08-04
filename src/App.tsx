@@ -14,6 +14,11 @@ import DiveDetailPage from './pages/DiveDetailPage';
 import CompetitionDetailPage from './pages/CompetitionDetailPage';
 import LogTrainingDivePage from './pages/LogTrainingDivePage';
 import ProfileSetup from './pages/ProfileSetup';
+import CoachOverview from './pages/CoachOverview';
+import DiverOverview from './pages/DiverOverview';
+import CoachProfile from './pages/CoachProfile';
+import CoachRegister from './pages/CoachRegister';
+import InviteClaim from './pages/InviteClaim';
 import { Sidebar, SidebarLayout } from './components/Sidebar';
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
@@ -65,32 +70,42 @@ function App(): JSX.Element {
   }
 
   const hasDiver = !!profile?.diver?.diver_id;
+  const isCoach = profile?.type === 'coach';
 
-  const navItems: NavItem[] = [
-    { label: 'Overview', to: '/', active: pathname === '/' },
-    {
-      label: 'Profile',
-      to: '/profile/me',
-      active: pathname === '/profile/me',
-    },
-    ...(hasDiver
-      ? [
-          {
-            label: 'History',
-            to: '/profile/me/history',
-            active: pathname.startsWith('/profile/me/history'),
-          },
-          {
-            label: 'Statistics',
-            to: '/profile/me/statistics',
-            active: pathname.startsWith('/profile/me/statistics'),
-          },
-        ]
-      : []),
-    { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
-  ];
+  const navItems: NavItem[] = isCoach
+    ? [
+        { label: 'Overview', to: '/', active: pathname === '/' },
+        { label: 'Profile', to: '/profile/me', active: pathname === '/profile/me' },
+        { label: 'Register', to: '/register', active: pathname.startsWith('/register') },
+        { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
+      ]
+    : [
+        { label: 'Overview', to: '/', active: pathname === '/' },
+        {
+          label: 'Profile',
+          to: '/profile/me',
+          active: pathname === '/profile/me',
+        },
+        ...(hasDiver
+          ? [
+              {
+                label: 'History',
+                to: '/profile/me/history',
+                active: pathname.startsWith('/profile/me/history'),
+              },
+              {
+                label: 'Statistics',
+                to: '/profile/me/statistics',
+                active: pathname.startsWith('/profile/me/statistics'),
+              },
+            ]
+          : []),
+        { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
+      ];
 
-  const profileContent = profile?.diver ? (
+  const profileContent = profile?.coach ? (
+    <CoachProfile coach={profile.coach} />
+  ) : profile?.diver ? (
     <DiverProfile diver={profile.diver} />
   ) : (
     <div className="flex flex-col items-start gap-4">
@@ -155,15 +170,23 @@ function App(): JSX.Element {
           <Route
             path="/"
             element={
-              <div className="max-w-4xl mx-auto px-6 py-12">
-                <h2 className="text-2xl font-bold mb-1">Welcome back, {user?.full_name}.</h2>
-              </div>
+              isCoach ? (
+                <CoachOverview />
+              ) : (
+                <DiverOverview
+                  fullName={user?.full_name}
+                  hasDiver={hasDiver}
+                  diverId={profile?.diver?.diver_id ?? undefined}
+                />
+              )
             }
           />
           <Route
             path="/profile/:id"
             element={<div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>}
           />
+          <Route path="/register" element={<CoachRegister />} />
+          <Route path="/invite/:token" element={<InviteClaim />} />
           <Route
             path="/profile/me/history"
             element={

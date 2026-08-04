@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDiveDetail } from '../hooks/useDiver';
 import { annotateJudgeScores, scoreMultiplier } from '../lib/diveScoring';
+import AddToPortfolioButton from '../components/Portfolio/AddToPortfolioButton';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -27,12 +28,20 @@ export default function DiveDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm mb-8 transition-colors cursor-pointer"
-      >
-        ← Back
-      </button>
+      <div className="flex items-center justify-between mb-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm transition-colors cursor-pointer"
+        >
+          ← Back
+        </button>
+        {dive && source && (
+          <AddToPortfolioButton
+            itemType={source === 'training' ? 'training_dive' : 'competition_dive'}
+            itemId={dive.id}
+          />
+        )}
+      </div>
 
       {isLoading && (
         <div className="text-slate-500 text-sm">Loading…</div>
