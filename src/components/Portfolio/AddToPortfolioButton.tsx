@@ -1,82 +1,48 @@
 import { useState } from 'react';
-import { usePortfolio, useAddEntry, useCreateFolder } from '../../hooks/usePortfolio';
-import type { PortfolioFolder, PortfolioItemType } from '../../types/portfolio';
+import { usePortfolios, useAddEntry, useCreatePortfolio } from '../../hooks/usePortfolio';
+import type { PortfolioItemType } from '../../types/portfolio';
 
 interface Props {
   itemType: PortfolioItemType;
   itemId: string;
 }
 
-function flattenFolders(folders: PortfolioFolder[]): { folder: PortfolioFolder; depth: number }[] {
-  const byParent = new Map<string | undefined, PortfolioFolder[]>();
-  folders.forEach((f) => {
-    const list = byParent.get(f.parent_id) ?? [];
-    list.push(f);
-    byParent.set(f.parent_id, list);
-  });
-
-  const out: { folder: PortfolioFolder; depth: number }[] = [];
-  const walk = (parentId: string | undefined, depth: number) => {
-    const children = (byParent.get(parentId) ?? [])
-      .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
-    children.forEach((f) => {
-      out.push({ folder: f, depth });
-      walk(f.id, depth + 1);
-    });
-  };
-  walk(undefined, 0);
-  return out;
-}
-
 function AddToPortfolioButton({ itemType, itemId }: Props): JSX.Element {
-  const { data } = usePortfolio();
+  const { data: portfolios = [] } = usePortfolios();
   const addEntry = useAddEntry();
-  const createFolder = useCreateFolder();
+  const createPortfolio = useCreatePortfolio();
 
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState('');
-  const [creatingNew, setCreatingNew] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newName, setNewName] = useState('');
   const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const flat = flattenFolders(data?.folders ?? []);
-
-  const handleAdd = () => {
-    if (!selected) return;
+  const handleAdd = (portfolioId: string) => {
+    setError(null);
     addEntry.mutate(
-      { folderId: selected, body: { item_type: itemType, item_id: itemId } },
-      { onSuccess: () => { setAdded(true); setOpen(false); } },
-    );
-  };
-
-  const handleCreateAndAdd = () => {
-    if (!newFolderName.trim()) return;
-    createFolder.mutate(
-      { name: newFolderName.trim() },
+      { portfolioId, body: { item_type: itemType, item_id: itemId } },
       {
-        onSuccess: (folder) => {
-          addEntry.mutate(
-            { folderId: folder.id, body: { item_type: itemType, item_id: itemId } },
-            {
-              onSuccess: () => {
-                setAdded(true);
-                setOpen(false);
-                setCreatingNew(false);
-                setNewFolderName('');
-              },
-            },
-          );
-        },
+        onSuccess: () => { setAdded(true); setOpen(false); },
+        onError: (err) => setError(err instanceof Error ? err.message : 'Failed to add'),
       },
     );
   };
 
+  const handleCreateAndAdd = () => {
+    if (!newName.trim()) return;
+    setError(null);
+    createPortfolio.mutate(newName.trim(), {
+      onSuccess: (portfolio) => {
+        setNewName('');
+        handleAdd(portfolio.id);
+      },
+      onError: (err) => setError(err instanceof Error ? err.message : 'Failed to create portfolio'),
+    });
+  };
+
   if (added && !open) {
     return (
-      <button
-        onClick={() => setAdded(false)}
-        className="text-cyan-400 text-sm cursor-pointer"
-      >
+      <button onClick={() => setAdded(false)} className="text-cyan-400 text-sm cursor-pointer">
         Added to portfolio ✓
       </button>
     );
@@ -94,55 +60,46 @@ function AddToPortfolioButton({ itemType, itemId }: Props): JSX.Element {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {creatingNew ? (
-        <>
-          <input
-            autoFocus
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreateAndAdd()}
-            placeholder="New folder name"
-            className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm
-                       placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-          />
-          <button onClick={handleCreateAndAdd} className="text-cyan-400 hover:text-cyan-300 text-sm cursor-pointer">
-            Create &amp; add
-          </button>
-        </>
-      ) : (
-        <>
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-          >
-            <option value="">Choose a folder…</option>
-            {flat.map(({ folder, depth }) => (
-              <option key={folder.id} value={folder.id}>
-                {'—'.repeat(depth)} {folder.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleAdd}
-            disabled={!selected || addEntry.isPending}
-            className="text-cyan-400 hover:text-cyan-300 disabled:text-slate-600 disabled:cursor-not-allowed text-sm cursor-pointer"
-          >
-            Add
-          </button>
-          <button
-            onClick={() => setCreatingNew(true)}
-            className="text-slate-500 hover:text-slate-300 text-sm cursor-pointer"
-          >
-            + New folder
-          </button>
-        </>
+    <div className="flex flex-col items-end gap-2">
+      {portfolios.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {portfolios.map((portfolio) => (
+            <button
+              key={portfolio.id}
+              onClick={() => handleAdd(portfolio.id)}
+              disabled={addEntry.isPending}
+              className="text-slate-300 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500 rounded-lg px-3 py-1 text-sm
+                         transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {portfolio.name}
+            </button>
+          ))}
+        </div>
       )}
-      <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-slate-300 text-sm cursor-pointer">
-        Cancel
-      </button>
+
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus={portfolios.length === 0}
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleCreateAndAdd()}
+          placeholder="New portfolio name"
+          className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm
+                     placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+        />
+        <button
+          onClick={handleCreateAndAdd}
+          disabled={!newName.trim() || createPortfolio.isPending}
+          className="text-cyan-400 hover:text-cyan-300 disabled:text-slate-600 disabled:cursor-not-allowed text-sm cursor-pointer"
+        >
+          Create &amp; add
+        </button>
+        <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-slate-300 text-sm cursor-pointer">
+          Cancel
+        </button>
+      </div>
+
+      {error && <p className="text-rose-400 text-xs">{error}</p>}
     </div>
   );
 }

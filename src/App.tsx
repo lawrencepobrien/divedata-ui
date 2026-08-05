@@ -16,6 +16,7 @@ import LogTrainingDivePage from './pages/LogTrainingDivePage';
 import ProfileSetup from './pages/ProfileSetup';
 import CoachOverview from './pages/CoachOverview';
 import DiverOverview from './pages/DiverOverview';
+import PortfolioDetailPage from './pages/PortfolioDetailPage';
 import CoachProfile from './pages/CoachProfile';
 import CoachRegister from './pages/CoachRegister';
 import InviteClaim from './pages/InviteClaim';
@@ -173,11 +174,7 @@ function App(): JSX.Element {
               isCoach ? (
                 <CoachOverview />
               ) : (
-                <DiverOverview
-                  fullName={user?.full_name}
-                  hasDiver={hasDiver}
-                  diverId={profile?.diver?.diver_id ?? undefined}
-                />
+                <DiverOverview fullName={user?.full_name} hasDiver={hasDiver} />
               )
             }
           />
@@ -187,6 +184,7 @@ function App(): JSX.Element {
           />
           <Route path="/register" element={<CoachRegister />} />
           <Route path="/invite/:token" element={<InviteClaim />} />
+          <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route
             path="/profile/me/history"
             element={

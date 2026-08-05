@@ -1,10 +1,5 @@
 import { client } from './client';
-import { Portfolio, PortfolioEntry, PortfolioFolder, PortfolioItemType } from '../types/portfolio';
-
-export interface CreateFolderRequest {
-  name: string;
-  parent_id?: string;
-}
+import { Portfolio, PortfolioDetail, PortfolioEntry, PortfolioItemType } from '../types/portfolio';
 
 export interface AddEntryRequest {
   item_type: PortfolioItemType;
@@ -12,15 +7,13 @@ export interface AddEntryRequest {
 }
 
 export const portfolioApi = {
-  get: () => client.get<Portfolio>('/me/portfolio'),
-  createFolder: (body: CreateFolderRequest) =>
-    client.post<PortfolioFolder>('/me/portfolio/folders', body),
-  renameFolder: (id: string, name: string) =>
-    client.patch<void>(`/me/portfolio/folders/${id}`, { name }),
-  moveFolder: (id: string, parentId: string | null) =>
-    client.patch<void>(`/me/portfolio/folders/${id}`, { parent_id: parentId }),
-  deleteFolder: (id: string) => client.delete<void>(`/me/portfolio/folders/${id}`),
-  addEntry: (folderId: string, body: AddEntryRequest) =>
-    client.post<PortfolioEntry>(`/me/portfolio/folders/${folderId}/entries`, body),
-  removeEntry: (entryId: string) => client.delete<void>(`/me/portfolio/entries/${entryId}`),
+  list: () => client.get<Portfolio[]>('/me/portfolios'),
+  get: (id: string) => client.get<PortfolioDetail>(`/me/portfolios/${id}`),
+  create: (name: string) => client.post<Portfolio>('/me/portfolios', { name }),
+  rename: (id: string, name: string) => client.patch<void>(`/me/portfolios/${id}`, { name }),
+  deletePortfolio: (id: string) => client.delete<void>(`/me/portfolios/${id}`),
+  addEntry: (portfolioId: string, body: AddEntryRequest) =>
+    client.post<PortfolioEntry>(`/me/portfolios/${portfolioId}/entries`, body),
+  removeEntry: (portfolioId: string, entryId: string) =>
+    client.delete<void>(`/me/portfolios/${portfolioId}/entries/${entryId}`),
 };
