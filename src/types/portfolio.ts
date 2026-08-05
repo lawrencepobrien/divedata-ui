@@ -1,10 +1,10 @@
 export type PortfolioItemType = 'training_dive' | 'competition_dive' | 'competition';
 
-export interface PortfolioFolder {
+export interface Portfolio {
   id: string;
-  parent_id?: string;
   name: string;
   position: number;
+  entry_count: number;
 }
 
 export interface PortfolioEntrySummary {
@@ -18,14 +18,14 @@ export interface PortfolioEntrySummary {
 
 export interface PortfolioEntry {
   id: string;
-  folder_id: string;
+  portfolio_id: string;
   item_type: PortfolioItemType;
   item_id: string;
   position: number;
   summary: PortfolioEntrySummary;
 }
 
-export interface Portfolio {
-  folders: PortfolioFolder[];
+export interface PortfolioDetail {
+  portfolio: Portfolio;
   entries: PortfolioEntry[];
 }

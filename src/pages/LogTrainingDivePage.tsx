@@ -4,6 +4,8 @@ import type { BoardType } from '../types/trendline';
 import { useCreateTrainingDive } from '../hooks/useDiver';
 import { useDiveTypeLookup } from '../hooks/useDiveTypes';
 import { annotateJudgeScores, scoreMultiplier, sumRetainedJudgeScores } from '../lib/diveScoring';
+import VideoFilePicker from '../components/DiveVideo/VideoFilePicker';
+import { validateVideoFile, uploadDiveVideo } from '../api/media';
 
 const BOARD_OPTIONS: BoardType[] = ['1m', '3m', '5m', '7.5m', '10m'];
 
@@ -30,6 +32,12 @@ export default function LogTrainingDivePage({ diverId }: Props) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [totalScore, setTotalScore] = useState('');
   const [judgeScores, setJudgeScores] = useState<string[]>([]);
+
+  // Optional video: held here during form entry, uploaded after the dive is created
+  // (the video needs the new dive's id).
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const debouncedDiveCode = useDebouncedValue(diveCode, 300);
   const { data: diveType, isFetching: lookingUpDiveType } = useDiveTypeLookup(
@@ -77,7 +85,27 @@ export default function LogTrainingDivePage({ diverId }: Props) {
         judge_scores: validJudgeScores,
       },
       {
-        onSuccess: () => navigate('/profile/me'),
+        onSuccess: async (created) => {
+          // No video attached — done.
+          if (!videoFile) {
+            navigate('/profile/me');
+            return;
+          }
+          // The dive exists now, so upload its video. If this fails the dive is still
+          // saved, so surface the error and let them retry from the dive page.
+          try {
+            setUploadProgress(0);
+            await uploadDiveVideo(diverId, 'training', created.id, videoFile, setUploadProgress);
+            navigate('/profile/me');
+          } catch (err) {
+            setUploadProgress(null);
+            setVideoError(
+              err instanceof Error
+                ? `${err.message} — your dive was saved; you can add the video from the dive page.`
+                : 'Video upload failed — your dive was saved; add the video from the dive page.',
+            );
+          }
+        },
       },
     );
   };
@@ -228,16 +256,54 @@ export default function LogTrainingDivePage({ diverId }: Props) {
               )}
             </div>
           </Field>
+
+          <Field label="Video (optional)">
+            {videoFile ? (
+              <div className="flex items-center gap-3">
+                <span className="text-slate-300 text-sm truncate max-w-[70%]">{videoFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoFile(null);
+                    setVideoError(null);
+                  }}
+                  className="text-slate-500 hover:text-rose-400 text-xs cursor-pointer transition-colors shrink-0"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <VideoFilePicker
+                label="Attach a video"
+                onSelect={(f) => {
+                  const err = validateVideoFile(f);
+                  if (err) {
+                    setVideoError(err);
+                    return;
+                  }
+                  setVideoError(null);
+                  setVideoFile(f);
+                }}
+              />
+            )}
+            <p className="text-slate-600 text-xs mt-1">
+              Optional — attach a clip of the dive. It uploads after the dive is saved.
+            </p>
+            {uploadProgress !== null && (
+              <p className="text-cyan-400 text-xs mt-1">Uploading video… {uploadProgress}%</p>
+            )}
+            {videoError && <p className="text-rose-400 text-xs mt-1">{videoError}</p>}
+          </Field>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={!canSubmit || createDive.isPending}
+            disabled={!canSubmit || createDive.isPending || uploadProgress !== null}
             className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed
                        text-slate-950 font-semibold rounded-lg px-5 py-2.5 text-sm transition duration-150 cursor-pointer"
           >
-            {createDive.isPending ? 'Saving…' : 'Log dive'}
+            {uploadProgress !== null ? 'Uploading video…' : createDive.isPending ? 'Saving…' : 'Log dive'}
           </button>
           {!canSubmit && diveCode.trim().length > 0 && !hasTotalScore && !hasJudgeScores && (
             <span className="text-sm text-slate-500">

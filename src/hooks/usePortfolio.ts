@@ -1,68 +1,68 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { portfolioApi, CreateFolderRequest, AddEntryRequest } from '../api/portfolio';
-import type { Portfolio, PortfolioEntry, PortfolioFolder } from '../types/portfolio';
+import { portfolioApi, AddEntryRequest } from '../api/portfolio';
+import type { Portfolio, PortfolioDetail, PortfolioEntry } from '../types/portfolio';
 
 export const portfolioKeys = {
-  all: ['portfolio'] as const,
+  all: ['portfolios'] as const,
+  detail: (id: string) => ['portfolios', id] as const,
 };
 
-export function usePortfolio(enabled = true) {
-  return useQuery<Portfolio>({
+export function usePortfolios() {
+  return useQuery<Portfolio[]>({
     queryKey: portfolioKeys.all,
-    queryFn: () => portfolioApi.get(),
-    enabled,
+    queryFn: () => portfolioApi.list(),
   });
 }
 
-function useInvalidatePortfolio() {
+export function usePortfolioDetail(id: string | undefined) {
+  return useQuery<PortfolioDetail>({
+    queryKey: portfolioKeys.detail(id ?? ''),
+    queryFn: () => portfolioApi.get(id!),
+    enabled: !!id,
+  });
+}
+
+function useInvalidatePortfolios() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: portfolioKeys.all });
 }
 
-export function useCreateFolder() {
-  const invalidate = useInvalidatePortfolio();
-  return useMutation<PortfolioFolder, Error, CreateFolderRequest>({
-    mutationFn: (body) => portfolioApi.createFolder(body),
+export function useCreatePortfolio() {
+  const invalidate = useInvalidatePortfolios();
+  return useMutation<Portfolio, Error, string>({
+    mutationFn: (name) => portfolioApi.create(name),
     onSuccess: invalidate,
   });
 }
 
-export function useRenameFolder() {
-  const invalidate = useInvalidatePortfolio();
+export function useRenamePortfolio() {
+  const invalidate = useInvalidatePortfolios();
   return useMutation<void, Error, { id: string; name: string }>({
-    mutationFn: ({ id, name }) => portfolioApi.renameFolder(id, name),
+    mutationFn: ({ id, name }) => portfolioApi.rename(id, name),
     onSuccess: invalidate,
   });
 }
 
-export function useMoveFolder() {
-  const invalidate = useInvalidatePortfolio();
-  return useMutation<void, Error, { id: string; parentId: string | null }>({
-    mutationFn: ({ id, parentId }) => portfolioApi.moveFolder(id, parentId),
-    onSuccess: invalidate,
-  });
-}
-
-export function useDeleteFolder() {
-  const invalidate = useInvalidatePortfolio();
+export function useDeletePortfolio() {
+  const invalidate = useInvalidatePortfolios();
   return useMutation<void, Error, string>({
-    mutationFn: (id) => portfolioApi.deleteFolder(id),
+    mutationFn: (id) => portfolioApi.deletePortfolio(id),
     onSuccess: invalidate,
   });
 }
 
 export function useAddEntry() {
-  const invalidate = useInvalidatePortfolio();
-  return useMutation<PortfolioEntry, Error, { folderId: string; body: AddEntryRequest }>({
-    mutationFn: ({ folderId, body }) => portfolioApi.addEntry(folderId, body),
+  const invalidate = useInvalidatePortfolios();
+  return useMutation<PortfolioEntry, Error, { portfolioId: string; body: AddEntryRequest }>({
+    mutationFn: ({ portfolioId, body }) => portfolioApi.addEntry(portfolioId, body),
     onSuccess: invalidate,
   });
 }
 
 export function useRemoveEntry() {
-  const invalidate = useInvalidatePortfolio();
-  return useMutation<void, Error, string>({
-    mutationFn: (entryId) => portfolioApi.removeEntry(entryId),
+  const invalidate = useInvalidatePortfolios();
+  return useMutation<void, Error, { portfolioId: string; entryId: string }>({
+    mutationFn: ({ portfolioId, entryId }) => portfolioApi.removeEntry(portfolioId, entryId),
     onSuccess: invalidate,
   });
 }

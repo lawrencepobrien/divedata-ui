@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDiveDetail } from '../hooks/useDiver';
 import { annotateJudgeScores, scoreMultiplier } from '../lib/diveScoring';
 import AddToPortfolioButton from '../components/Portfolio/AddToPortfolioButton';
+import DiveVideoUpload from '../components/DiveVideo/DiveVideoUpload';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -122,6 +123,13 @@ export default function DiveDetailPage() {
               {dive.total_score != null ? dive.total_score.toFixed(2) : '—'}
             </p>
           </div>
+
+          {/* Video */}
+          {diverId && source && scoreId && (
+            <div className="border-t border-slate-800 pt-6">
+              <DiveVideoUpload diverId={diverId} source={source} diveId={scoreId} />
+            </div>
+          )}
         </div>
       )}
     </div>
