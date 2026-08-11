@@ -70,28 +70,6 @@ export function useDiveDetail(
   });
 }
 
-export function useDiveTrendline(
-  diverId: string | null | undefined,
-  diveCode: string | null,
-  board: BoardType | null,
-) {
-  return useQuery<TrendlinePoint[]>({
-    queryKey: diverKeys.diveTrendline(diverId ?? '', diveCode ?? '', board ?? '1m'),
-    queryFn: async ({ signal }) => {
-      const data = await diversApi.getDiveTrendline(diverId!, diveCode!, board!, signal);
-      return data.points.map((pt) => ({
-        date: pt.date,
-        score: pt.score,
-        label: pt.competition,
-        id: pt.id,
-        source: pt.source,
-      }));
-    },
-    enabled: !!diverId && !!diveCode && !!board,
-    staleTime: STALE_MS,
-  });
-}
-
 export function useDives(diverId: string | null | undefined) {
   return useQuery<DiveListEntry[]>({
     queryKey: diverKeys.dives(diverId ?? ''),
