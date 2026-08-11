@@ -15,15 +15,13 @@ function formatDate(iso: string | null | undefined): string {
 
 export default function DiveDetailPage() {
   const navigate = useNavigate();
-  const { diverId, source, scoreId } = useParams<{
+  const { diverId, scoreId } = useParams<{
     diverId: string;
-    source: 'competition' | 'training';
     scoreId: string;
   }>();
 
   const { data: dive, isLoading, isError } = useDiveDetail(
     diverId,
-    source,
     scoreId,
   );
 
@@ -36,11 +34,8 @@ export default function DiveDetailPage() {
         >
           ← Back
         </button>
-        {dive && source && (
-          <AddToPortfolioButton
-            itemType={source === 'training' ? 'training_dive' : 'competition_dive'}
-            itemId={dive.id}
-          />
+        {dive && (
+          <AddToPortfolioButton itemType="dive" itemId={dive.id} />
         )}
       </div>
 
@@ -84,11 +79,11 @@ export default function DiveDetailPage() {
           </div>
 
           {/* Judge scores */}
-          {dive.judge_scores.length > 0 ? (
+          {dive.scores && dive.scores.judges.length > 0 ? (
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500 mb-3">Judge Scores</p>
               <div className="flex gap-2 flex-wrap">
-                {annotateJudgeScores(dive.judge_scores, (js) => js.score).map(({ item: js, dropped, dropSide }, i) => (
+                {annotateJudgeScores(dive.scores.judges, (js) => js.score).map(({ item: js, dropped, dropSide }, i) => (
                   <div
                     key={i}
                     className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl border text-sm font-mono font-semibold ${
@@ -106,9 +101,9 @@ export default function DiveDetailPage() {
                   </div>
                 ))}
               </div>
-              {dive.judge_scores.length < 3 && (
+              {dive.scores.judges.length < 3 && (
                 <p className="text-slate-600 text-xs mt-3">
-                  Fewer than 3 judges — score is scaled ×{scoreMultiplier(dive.judge_scores.length).toFixed(2)} instead of dropping outliers.
+                  Fewer than 3 judges — score is scaled ×{scoreMultiplier(dive.scores.judges.length).toFixed(2)} instead of dropping outliers.
                 </p>
               )}
             </div>
@@ -120,14 +115,14 @@ export default function DiveDetailPage() {
           <div className="border-t border-slate-800 pt-6">
             <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">Total Score</p>
             <p className="text-4xl font-bold text-cyan-400">
-              {dive.total_score != null ? dive.total_score.toFixed(2) : '—'}
+              {dive.scores?.total != null ? dive.scores.total.toFixed(2) : '—'}
             </p>
           </div>
 
           {/* Video */}
-          {diverId && source && scoreId && (
+          {diverId && scoreId && (
             <div className="border-t border-slate-800 pt-6">
-              <DiveVideoUpload diverId={diverId} source={source} diveId={scoreId} />
+              <DiveVideoUpload diverId={diverId} diveId={scoreId} />
             </div>
           )}
         </div>

@@ -195,9 +195,7 @@ export default function StatisticsPage({ diverId }: Props) {
               <TrendlineChart
                 series={eventSeries}
                 height={240}
-                onPointClick={(info) => {
-                  if (info.id) navigate(`/profile/${diverId}/competitions/${info.id}`);
-                }}
+                onPointClick={() => navigate(`/profile/${diverId}/competitions`)}
               />
             )}
           </div>
@@ -316,7 +314,7 @@ export default function StatisticsPage({ diverId }: Props) {
                   series={diveSeries}
                   height={240}
                   onPointClick={(info) => {
-                    if (info.id) navigate(`/profile/${diverId}/dives/${info.source ?? 'competition'}/${info.id}`);
+                    if (info.id) navigate(`/profile/${diverId}/dives/${info.id}`);
                   }}
                 />
               )}

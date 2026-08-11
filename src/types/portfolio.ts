@@ -1,4 +1,4 @@
-export type PortfolioItemType = 'training_dive' | 'competition_dive' | 'competition';
+export type PortfolioItemType = 'dive';
 
 export interface Portfolio {
   id: string;

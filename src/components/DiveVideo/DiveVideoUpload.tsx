@@ -5,16 +5,15 @@ import VideoFilePicker from './VideoFilePicker';
 
 interface Props {
   diverId: string;
-  source: 'competition' | 'training';
   diveId: string;
 }
 
 /** Video section for an existing dive: shows the player if a video exists, otherwise
  *  an upload button. Handles upload progress and removal. */
-export default function DiveVideoUpload({ diverId, source, diveId }: Props) {
-  const { data, isLoading } = useDiveMedia(diverId, source, diveId);
-  const upload = useUploadDiveVideo(diverId, source, diveId);
-  const remove = useDeleteDiveMedia(diverId, source, diveId);
+export default function DiveVideoUpload({ diverId, diveId }: Props) {
+  const { data, isLoading } = useDiveMedia(diverId, diveId);
+  const upload = useUploadDiveVideo(diverId, diveId);
+  const remove = useDeleteDiveMedia(diverId, diveId);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 

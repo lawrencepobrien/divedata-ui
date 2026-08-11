@@ -14,7 +14,6 @@ export interface EventTrendline {
   diver_id: string;
   discipline: Discipline;
   points: Array<{
-    competition_id: string;
     date: string | null;
     competition: string;
     score: number;

@@ -6,8 +6,8 @@ import type { CompetitionResult } from '../types/history';
 import type {
   DiveScoreDetail,
   DiveScore,
-  TrainingDiveListEntry,
-  CreateTrainingDiveRequest,
+  DiveListEntry,
+  CreateDiveRequest,
 } from '../types/dive';
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes — competition data doesn't change in real time
@@ -19,9 +19,8 @@ export const diverKeys = {
     ['diver', diverId, 'trendline', 'events', discipline] as const,
   diveTrendline: (diverId: string, diveCode: string, board: BoardType) =>
     ['diver', diverId, 'trendline', 'dives', diveCode, board] as const,
-  diveDetail: (diverId: string, source: string, scoreId: string) =>
-    ['diver', diverId, 'dives', source, scoreId] as const,
-  trainingDives: (diverId: string) => ['diver', diverId, 'training-dives'] as const,
+  diveDetail: (diverId: string, diveId: string) => ['diver', diverId, 'dives', diveId] as const,
+  dives: (diverId: string) => ['diver', diverId, 'dives-list'] as const,
   diveTrendlinePrefix: (diverId: string) => ['diver', diverId, 'trendline', 'dives'] as const,
 };
 
@@ -52,7 +51,6 @@ export function useEventTrendline(diverId: string | null | undefined, discipline
         date: pt.date,
         score: pt.score,
         label: pt.competition,
-        id: pt.competition_id,
       }));
     },
     enabled: !!diverId,
@@ -62,18 +60,12 @@ export function useEventTrendline(diverId: string | null | undefined, discipline
 
 export function useDiveDetail(
   diverId: string | null | undefined,
-  source: 'competition' | 'training' | null | undefined,
-  scoreId: string | null | undefined,
+  diveId: string | null | undefined,
 ) {
   return useQuery<DiveScoreDetail>({
-    queryKey: diverKeys.diveDetail(diverId ?? '', source ?? '', scoreId ?? ''),
-    queryFn: ({ signal }) => {
-      if (source === 'training') {
-        return diversApi.getTrainingDiveDetail(diverId!, scoreId!, signal);
-      }
-      return diversApi.getCompetitionDiveDetail(diverId!, scoreId!, signal);
-    },
-    enabled: !!diverId && !!source && !!scoreId,
+    queryKey: diverKeys.diveDetail(diverId ?? '', diveId ?? ''),
+    queryFn: ({ signal }) => diversApi.getDiveDetail(diverId!, diveId!, signal),
+    enabled: !!diverId && !!diveId,
     staleTime: STALE_MS,
   });
 }
@@ -100,33 +92,33 @@ export function useDiveTrendline(
   });
 }
 
-export function useTrainingDives(diverId: string | null | undefined) {
-  return useQuery<TrainingDiveListEntry[]>({
-    queryKey: diverKeys.trainingDives(diverId ?? ''),
-    queryFn: ({ signal }) => diversApi.listTrainingDives(diverId!, signal),
+export function useDives(diverId: string | null | undefined) {
+  return useQuery<DiveListEntry[]>({
+    queryKey: diverKeys.dives(diverId ?? ''),
+    queryFn: ({ signal }) => diversApi.listDives(diverId!, signal),
     enabled: !!diverId,
     staleTime: STALE_MS,
   });
 }
 
-function invalidateTrainingQueries(qc: ReturnType<typeof useQueryClient>, diverId: string) {
-  qc.invalidateQueries({ queryKey: diverKeys.trainingDives(diverId) });
+function invalidateDiveQueries(qc: ReturnType<typeof useQueryClient>, diverId: string) {
+  qc.invalidateQueries({ queryKey: diverKeys.dives(diverId) });
   qc.invalidateQueries({ queryKey: diverKeys.stats(diverId) });
   qc.invalidateQueries({ queryKey: diverKeys.diveTrendlinePrefix(diverId) });
 }
 
-export function useCreateTrainingDive(diverId: string) {
+export function useCreateDive(diverId: string) {
   const qc = useQueryClient();
-  return useMutation<DiveScore, Error, CreateTrainingDiveRequest>({
-    mutationFn: (body) => diversApi.createTrainingDive(diverId, body),
-    onSuccess: () => invalidateTrainingQueries(qc, diverId),
+  return useMutation<DiveScore, Error, CreateDiveRequest>({
+    mutationFn: (body) => diversApi.createDive(diverId, body),
+    onSuccess: () => invalidateDiveQueries(qc, diverId),
   });
 }
 
-export function useDeleteTrainingDive(diverId: string) {
+export function useDeleteDive(diverId: string) {
   const qc = useQueryClient();
   return useMutation<void, Error, string>({
-    mutationFn: (scoreId) => diversApi.deleteTrainingDive(diverId, scoreId),
-    onSuccess: () => invalidateTrainingQueries(qc, diverId),
+    mutationFn: (scoreId) => diversApi.deleteDive(diverId, scoreId),
+    onSuccess: () => invalidateDiveQueries(qc, diverId),
   });
 }

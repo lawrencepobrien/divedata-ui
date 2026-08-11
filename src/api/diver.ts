@@ -5,8 +5,8 @@ import type { CompetitionResult } from '../types/history';
 import type {
   DiveScoreDetail,
   DiveScore,
-  TrainingDiveListEntry,
-  CreateTrainingDiveRequest,
+  DiveListEntry,
+  CreateDiveRequest,
 } from '../types/dive';
 
 export const diversApi = {
@@ -22,18 +22,15 @@ export const diversApi = {
   getHistory: (diverId: string, signal?: AbortSignal) =>
     client.get<CompetitionResult[]>(`/divers/${diverId}/history`, signal),
 
-  getCompetitionDiveDetail: (diverId: string, scoreId: string, signal?: AbortSignal) =>
-    client.get<DiveScoreDetail>(`/divers/${diverId}/competition-dives/${scoreId}`, signal),
+  getDiveDetail: (diverId: string, diveId: string, signal?: AbortSignal) =>
+    client.get<DiveScoreDetail>(`/divers/${diverId}/dives/${diveId}`, signal),
 
-  getTrainingDiveDetail: (diverId: string, scoreId: string, signal?: AbortSignal) =>
-    client.get<DiveScoreDetail>(`/divers/${diverId}/training-dives/${scoreId}`, signal),
+  listDives: (diverId: string, signal?: AbortSignal) =>
+    client.get<DiveListEntry[]>(`/divers/${diverId}/dives`, signal),
 
-  listTrainingDives: (diverId: string, signal?: AbortSignal) =>
-    client.get<TrainingDiveListEntry[]>(`/divers/${diverId}/training-dives`, signal),
+  createDive: (diverId: string, body: CreateDiveRequest) =>
+    client.post<DiveScore>(`/divers/${diverId}/dives`, body),
 
-  createTrainingDive: (diverId: string, body: CreateTrainingDiveRequest) =>
-    client.post<DiveScore>(`/divers/${diverId}/training-dives`, body),
-
-  deleteTrainingDive: (diverId: string, scoreId: string) =>
-    client.delete<void>(`/divers/${diverId}/training-dives/${scoreId}`),
+  deleteDive: (diverId: string, scoreId: string) =>
+    client.delete<void>(`/divers/${diverId}/dives/${scoreId}`),
 };

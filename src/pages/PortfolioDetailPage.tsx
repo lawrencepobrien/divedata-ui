@@ -10,30 +10,16 @@ import {
 } from '../hooks/usePortfolio';
 import type { PortfolioEntry } from '../types/portfolio';
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
 function entryLabel(entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return entry.summary.competition_name ?? 'Competition';
-  }
   return [entry.summary.dive_code, entry.summary.board].filter(Boolean).join(' · ') || 'Dive';
 }
 
 function entryMeta(entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return entry.summary.event_date ? formatDate(entry.summary.event_date) : '';
-  }
   return entry.summary.total_score != null ? entry.summary.total_score.toFixed(2) : '—';
 }
 
 function entryHref(diverId: string, entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return `/profile/${diverId}/competitions/${entry.item_id}`;
-  }
-  const source = entry.item_type === 'training_dive' ? 'training' : 'competition';
-  return `/profile/${diverId}/dives/${source}/${entry.item_id}`;
+  return `/profile/${diverId}/dives/${entry.item_id}`;
 }
 
 function PortfolioDetailPage(): JSX.Element {
@@ -50,7 +36,7 @@ function PortfolioDetailPage(): JSX.Element {
   const [name, setName] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const diverId = profile?.diver?.diver_id;
+  const diverId = profile?.diver?.id;
 
   const startRenaming = () => {
     if (!data) return;
@@ -145,9 +131,7 @@ function PortfolioDetailPage(): JSX.Element {
                     disabled={!diverId}
                     className="flex flex-col justify-between h-full w-full text-left cursor-pointer"
                   >
-                    <span className="text-xs uppercase tracking-wide text-slate-500">
-                      {entry.item_type === 'competition' ? 'Competition' : 'Dive'}
-                    </span>
+                    <span className="text-xs uppercase tracking-wide text-slate-500">Dive</span>
                     <span className="text-lg font-semibold text-slate-100 group-hover:text-cyan-400 transition-colors truncate">
                       {entryLabel(entry)}
                     </span>

@@ -1,7 +1,6 @@
 export interface DiveMedia {
   id: string;
   diver_id: string;
-  dive_source: 'competition' | 'training';
   dive_id: string;
   object_key: string;
   content_type?: string;

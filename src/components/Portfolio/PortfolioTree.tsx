@@ -13,30 +13,16 @@ interface Props {
   diverId: string;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
 function entryLabel(entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return entry.summary.competition_name ?? 'Competition';
-  }
   return [entry.summary.dive_code, entry.summary.board].filter(Boolean).join(' · ') || 'Dive';
 }
 
 function entryMeta(entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return entry.summary.event_date ? formatDate(entry.summary.event_date) : '';
-  }
   return entry.summary.total_score != null ? entry.summary.total_score.toFixed(2) : '—';
 }
 
 function entryHref(diverId: string, entry: PortfolioEntry): string {
-  if (entry.item_type === 'competition') {
-    return `/profile/${diverId}/competitions/${entry.item_id}`;
-  }
-  const source = entry.item_type === 'training_dive' ? 'training' : 'competition';
-  return `/profile/${diverId}/dives/${source}/${entry.item_id}`;
+  return `/profile/${diverId}/dives/${entry.item_id}`;
 }
 
 function PortfolioTree({ diverId }: Props): JSX.Element {

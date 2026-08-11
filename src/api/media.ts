@@ -10,23 +10,20 @@ export function validateVideoFile(file: File): string | null {
   return null;
 }
 
-type Source = 'competition' | 'training';
-
-const mediaPath = (diverId: string, source: Source, diveId: string) =>
-  `/divers/${diverId}/dives/${source}/${diveId}/media`;
+const mediaPath = (diverId: string, diveId: string) => `/divers/${diverId}/dives/${diveId}/media`;
 
 export const mediaApi = {
   // Start an upload: creates a pending row and returns a presigned PUT URL.
-  attach: (diverId: string, source: Source, diveId: string) =>
-    client.post<AttachMediaResponse>(mediaPath(diverId, source, diveId), {}),
+  attach: (diverId: string, diveId: string) =>
+    client.post<AttachMediaResponse>(mediaPath(diverId, diveId), {}),
   // Confirm the upload landed and flip the row to 'ready'.
-  complete: (diverId: string, source: Source, diveId: string) =>
-    client.post<DiveMedia>(`${mediaPath(diverId, source, diveId)}/complete`, {}),
+  complete: (diverId: string, diveId: string) =>
+    client.post<DiveMedia>(`${mediaPath(diverId, diveId)}/complete`, {}),
   // Fetch the dive's video (404 = none — callers handle that).
-  get: (diverId: string, source: Source, diveId: string, signal?: AbortSignal) =>
-    client.get<WatchMediaResponse>(mediaPath(diverId, source, diveId), signal),
-  remove: (diverId: string, source: Source, diveId: string) =>
-    client.delete<void>(mediaPath(diverId, source, diveId)),
+  get: (diverId: string, diveId: string, signal?: AbortSignal) =>
+    client.get<WatchMediaResponse>(mediaPath(diverId, diveId), signal),
+  remove: (diverId: string, diveId: string) =>
+    client.delete<void>(mediaPath(diverId, diveId)),
 };
 
 /**
@@ -61,12 +58,11 @@ function putToPresignedUrl(
 /** The full attach -> upload -> complete flow for one dive's video. */
 export async function uploadDiveVideo(
   diverId: string,
-  source: Source,
   diveId: string,
   file: File,
   onProgress?: (pct: number) => void,
 ): Promise<DiveMedia> {
-  const { upload_url } = await mediaApi.attach(diverId, source, diveId);
+  const { upload_url } = await mediaApi.attach(diverId, diveId);
   await putToPresignedUrl(upload_url, file, onProgress);
-  return mediaApi.complete(diverId, source, diveId);
+  return mediaApi.complete(diverId, diveId);
 }

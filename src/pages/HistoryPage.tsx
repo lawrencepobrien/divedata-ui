@@ -21,10 +21,13 @@ export default function HistoryPage({ diverId }: Props) {
       <h1 className="text-3xl font-bold mb-8">Competition History</h1>
       <div className="flex flex-col gap-4">
         {history.map((comp) => (
-          <div key={comp.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div
+            key={`${comp.name}|${comp.event_date ?? ''}`}
+            className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          >
             <div className="flex items-start justify-between mb-3">
               <button
-                onClick={() => navigate(`/profile/${diverId}/competitions/${comp.id}`)}
+                onClick={() => navigate(`/profile/${diverId}/competitions`)}
                 className="font-medium text-left hover:text-cyan-400 transition-colors cursor-pointer"
               >
                 {comp.name}
@@ -38,7 +41,7 @@ export default function HistoryPage({ diverId }: Props) {
               )}
             </div>
             {comp.events.map((event) => (
-              <div key={event.id} className="border-t border-slate-800 pt-3 mt-2">
+              <div key={event.discipline} className="border-t border-slate-800 pt-3 mt-2">
                 <p className="text-slate-500 text-xs uppercase tracking-wide mb-2">
                   {event.discipline === 'platform' ? 'Platform' : event.discipline}
                 </p>
@@ -46,7 +49,7 @@ export default function HistoryPage({ diverId }: Props) {
                   {event.dives.map((dive) => (
                     <button
                       key={dive.id}
-                      onClick={() => navigate(`/profile/${diverId}/dives/competition/${dive.id}`)}
+                      onClick={() => navigate(`/profile/${diverId}/dives/${dive.id}`)}
                       className="flex items-center justify-between w-full px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer text-left"
                     >
                       <span className="text-slate-400 text-sm font-mono">

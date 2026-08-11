@@ -11,8 +11,8 @@ import DiverProfile from './pages/DiverProfile';
 import HistoryPage from './pages/HistoryPage';
 import StatisticsPage from './pages/StatisticsPage';
 import DiveDetailPage from './pages/DiveDetailPage';
-import CompetitionDetailPage from './pages/CompetitionDetailPage';
-import LogTrainingDivePage from './pages/LogTrainingDivePage';
+import CompetitionPlaceholderPage from './pages/CompetitionPlaceholderPage';
+import LogDivePage from './pages/LogDivePage';
 import ProfileSetup from './pages/ProfileSetup';
 import CoachOverview from './pages/CoachOverview';
 import DiverOverview from './pages/DiverOverview';
@@ -70,7 +70,7 @@ function App(): JSX.Element {
     return <LandingPage />;
   }
 
-  const hasDiver = !!profile?.diver?.diver_id;
+  const hasDiver = !!profile?.diver?.id;
   const isCoach = profile?.type === 'coach';
 
   const navItems: NavItem[] = isCoach
@@ -189,7 +189,7 @@ function App(): JSX.Element {
             path="/profile/me/history"
             element={
               hasDiver
-                ? <HistoryPage diverId={profile!.diver!.diver_id} />
+                ? <HistoryPage diverId={profile!.diver!.id} />
                 : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
             }
           />
@@ -197,15 +197,15 @@ function App(): JSX.Element {
             path="/profile/me/statistics"
             element={
               hasDiver
-                ? <StatisticsPage diverId={profile!.diver!.diver_id} />
+                ? <StatisticsPage diverId={profile!.diver!.id} />
                 : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
             }
           />
           <Route
-            path="/profile/me/training/new"
+            path="/profile/me/dives/new"
             element={
               hasDiver
-                ? <LogTrainingDivePage diverId={profile!.diver!.diver_id} />
+                ? <LogDivePage diverId={profile!.diver!.id} />
                 : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
             }
           />
@@ -218,12 +218,12 @@ function App(): JSX.Element {
             }
           />
           <Route
-            path="/profile/:diverId/dives/:source/:scoreId"
+            path="/profile/:diverId/dives/:scoreId"
             element={<div className="max-w-4xl mx-auto"><DiveDetailPage /></div>}
           />
           <Route
-            path="/profile/:diverId/competitions/:competitionId"
-            element={<div className="max-w-4xl mx-auto"><CompetitionDetailPage /></div>}
+            path="/profile/:diverId/competitions"
+            element={<div className="max-w-4xl mx-auto"><CompetitionPlaceholderPage /></div>}
           />
           <Route path="/settings" element={<Settings user={user ?? null} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
