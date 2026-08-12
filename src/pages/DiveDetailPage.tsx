@@ -1,8 +1,12 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { profileApi } from '../api/profile';
 import { useDiveDetail } from '../hooks/useDiver';
+import { useRoster } from '../hooks/useCoach';
 import { annotateJudgeScores, scoreMultiplier } from '../lib/diveScoring';
 import AddToPortfolioButton from '../components/Portfolio/AddToPortfolioButton';
 import DiveVideoUpload from '../components/DiveVideo/DiveVideoUpload';
+import Breadcrumbs, { type Crumb } from '../components/Breadcrumbs';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -14,27 +18,55 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 export default function DiveDetailPage() {
-  const navigate = useNavigate();
   const { diverId, scoreId } = useParams<{
     diverId: string;
     scoreId: string;
   }>();
+  const location = useLocation();
+  // Set by PortfolioDetailPage when navigating here from one of its entries,
+  // so the trail can show the actual portfolio instead of the generic
+  // diver/home fallback below — absent for any other entry point (trends
+  // chart click, direct URL, etc).
+  const breadcrumbPrefix = (location.state as { breadcrumbPrefix?: Crumb[] } | null)?.breadcrumbPrefix;
 
   const { data: dive, isLoading, isError } = useDiveDetail(
     diverId,
     scoreId,
   );
 
+  // Add-to-portfolio and video upload/management are self-service only —
+  // a coach viewing a roster diver's dive can see it, but not act on it.
+  const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: () => profileApi.get() });
+  const isOwner = !!diverId && profile?.diver?.id === diverId;
+
+  // Only need roster data (for the diver's name) once we know the viewer
+  // isn't the dive's owner, and only as a fallback when we didn't arrive
+  // with a breadcrumbPrefix already — avoids a doomed /coach/roster call
+  // for every diver loading their own dive.
+  const { data: roster = [] } = useRoster(!breadcrumbPrefix && profile !== undefined && !isOwner);
+  const rosterDiver = !isOwner ? roster.find((d) => d.diver_id === diverId) : undefined;
+
+  const diveLabel = dive?.dive_code || dive?.description || 'Dive';
+  const breadcrumbs: Crumb[] = breadcrumbPrefix
+    ? [...breadcrumbPrefix, { label: diveLabel }]
+    : profile === undefined
+      ? [{ label: diveLabel }]
+      : isOwner
+        ? [{ label: 'Home', href: '/' }, { label: diveLabel }]
+        : [
+            { label: 'Team', href: '/' },
+            {
+              label: rosterDiver?.name ?? 'Diver',
+              href: rosterDiver ? `/roster/${rosterDiver.user_id}` : '/',
+            },
+            { label: diveLabel },
+          ];
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
       <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm transition-colors cursor-pointer"
-        >
-          ← Back
-        </button>
-        {dive && (
+        <Breadcrumbs items={breadcrumbs} />
+        {dive && isOwner && (
           <AddToPortfolioButton itemType="dive" itemId={dive.id} />
         )}
       </div>
@@ -122,7 +154,7 @@ export default function DiveDetailPage() {
           {/* Video */}
           {diverId && scoreId && (
             <div className="border-t border-slate-800 pt-6">
-              <DiveVideoUpload diverId={diverId} diveId={scoreId} />
+              <DiveVideoUpload diverId={diverId} diveId={scoreId} readOnly={!isOwner} />
             </div>
           )}
         </div>

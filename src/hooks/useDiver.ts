@@ -12,13 +12,19 @@ import type {
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes — competition data doesn't change in real time
 
+// portfolioId ?? 'all' scopes trendline/stats caches so a portfolio-narrowed
+// view and the diver-wide view never collide. `stats` (no portfolio segment)
+// stays as an invalidation prefix — TanStack Query matches it against every
+// scoped variant too, so invalidateDiveQueries still clears all of them.
 export const diverKeys = {
   stats: (diverId: string) => ['diver', diverId, 'stats'] as const,
+  statsDetail: (diverId: string, portfolioId?: string) =>
+    ['diver', diverId, 'stats', portfolioId ?? 'all'] as const,
   history: (diverId: string) => ['diver', diverId, 'history'] as const,
-  eventTrendline: (diverId: string, discipline: Discipline) =>
-    ['diver', diverId, 'trendline', 'events', discipline] as const,
-  diveTrendline: (diverId: string, diveCode: string, board: BoardType) =>
-    ['diver', diverId, 'trendline', 'dives', diveCode, board] as const,
+  eventTrendline: (diverId: string, discipline: Discipline, portfolioId?: string) =>
+    ['diver', diverId, 'trendline', 'events', discipline, portfolioId ?? 'all'] as const,
+  diveTrendline: (diverId: string, diveCode: string, board: BoardType, portfolioId?: string) =>
+    ['diver', diverId, 'trendline', 'dives', diveCode, board, portfolioId ?? 'all'] as const,
   diveDetail: (diverId: string, diveId: string) => ['diver', diverId, 'dives', diveId] as const,
   dives: (diverId: string) => ['diver', diverId, 'dives-list'] as const,
   diveTrendlinePrefix: (diverId: string) => ['diver', diverId, 'trendline', 'dives'] as const,
@@ -33,20 +39,24 @@ export function useCompetitionHistory(diverId: string | null | undefined) {
   });
 }
 
-export function useDiverStats(diverId: string | null | undefined) {
+export function useDiverStats(diverId: string | null | undefined, portfolioId?: string) {
   return useQuery<DiverStats>({
-    queryKey: diverKeys.stats(diverId ?? ''),
-    queryFn: ({ signal }) => diversApi.getStats(diverId!, signal),
+    queryKey: diverKeys.statsDetail(diverId ?? '', portfolioId),
+    queryFn: ({ signal }) => diversApi.getStats(diverId!, portfolioId, signal),
     enabled: !!diverId,
     staleTime: STALE_MS,
   });
 }
 
-export function useEventTrendline(diverId: string | null | undefined, discipline: Discipline) {
+export function useEventTrendline(
+  diverId: string | null | undefined,
+  discipline: Discipline,
+  portfolioId?: string,
+) {
   return useQuery<TrendlinePoint[]>({
-    queryKey: diverKeys.eventTrendline(diverId ?? '', discipline),
+    queryKey: diverKeys.eventTrendline(diverId ?? '', discipline, portfolioId),
     queryFn: async ({ signal }) => {
-      const data = await diversApi.getEventTrendline(diverId!, discipline, signal);
+      const data = await diversApi.getEventTrendline(diverId!, discipline, portfolioId, signal);
       return data.points.map((pt) => ({
         date: pt.date,
         score: pt.score,

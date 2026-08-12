@@ -10,10 +10,11 @@ export const portfolioKeys = {
   detail: (ownerId: string | undefined, id: string) => ['portfolios', ownerId ?? 'me', id] as const,
 };
 
-export function usePortfolios(ownerId?: string) {
+export function usePortfolios(ownerId?: string, enabled: boolean = true) {
   return useQuery<Portfolio[]>({
     queryKey: portfolioKeys.all(ownerId),
     queryFn: () => portfolioApi.list(ownerId),
+    enabled,
   });
 }
 

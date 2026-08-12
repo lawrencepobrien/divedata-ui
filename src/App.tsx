@@ -175,7 +175,7 @@ function App(): JSX.Element {
               isCoach ? (
                 <CoachOverview />
               ) : (
-                <DiverOverview fullName={user?.full_name} hasDiver={hasDiver} />
+                <DiverOverview fullName={user?.full_name} hasDiver={hasDiver} diverId={profile?.diver?.id} />
               )
             }
           />

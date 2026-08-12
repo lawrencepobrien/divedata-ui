@@ -28,4 +28,5 @@ export interface PortfolioEntry {
 export interface PortfolioDetail {
   portfolio: Portfolio;
   entries: PortfolioEntry[];
+  diver_id: string;
 }

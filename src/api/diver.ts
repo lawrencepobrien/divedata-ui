@@ -9,15 +9,36 @@ import type {
   CreateDiveRequest,
 } from '../types/dive';
 
+// portfolioParam builds the trailing "&portfolio_id=..." query fragment,
+// or '' when scoping is off — appended to an already-built query string.
+function portfolioParam(portfolioId?: string): string {
+  return portfolioId ? `&portfolio_id=${encodeURIComponent(portfolioId)}` : '';
+}
+
 export const diversApi = {
-  getStats: (diverId: string, signal?: AbortSignal) =>
-    client.get<DiverStats>(`/divers/${diverId}/stats`, signal),
+  getStats: (diverId: string, portfolioId?: string, signal?: AbortSignal) =>
+    client.get<DiverStats>(
+      `/divers/${diverId}/stats${portfolioId ? `?portfolio_id=${encodeURIComponent(portfolioId)}` : ''}`,
+      signal,
+    ),
 
-  getEventTrendline: (diverId: string, discipline: Discipline, signal?: AbortSignal) =>
-    client.get<EventTrendline>(`/divers/${diverId}/trendline/events?discipline=${discipline}`, signal),
+  getEventTrendline: (diverId: string, discipline: Discipline, portfolioId?: string, signal?: AbortSignal) =>
+    client.get<EventTrendline>(
+      `/divers/${diverId}/trendline/events?discipline=${discipline}${portfolioParam(portfolioId)}`,
+      signal,
+    ),
 
-  getDiveTrendline: (diverId: string, diveCode: string, board: BoardType, signal?: AbortSignal) =>
-    client.get<DiveTrendline>(`/divers/${diverId}/trendline/dives?dive_code=${encodeURIComponent(diveCode)}&board=${encodeURIComponent(board)}`, signal),
+  getDiveTrendline: (
+    diverId: string,
+    diveCode: string,
+    board: BoardType,
+    portfolioId?: string,
+    signal?: AbortSignal,
+  ) =>
+    client.get<DiveTrendline>(
+      `/divers/${diverId}/trendline/dives?dive_code=${encodeURIComponent(diveCode)}&board=${encodeURIComponent(board)}${portfolioParam(portfolioId)}`,
+      signal,
+    ),
 
   getHistory: (diverId: string, signal?: AbortSignal) =>
     client.get<CompetitionResult[]>(`/divers/${diverId}/history`, signal),

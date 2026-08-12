@@ -1,49 +1,92 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { profileApi } from '../api/profile';
 import {
   usePortfolioDetail,
   useRenamePortfolio,
   useDeletePortfolio,
   useRemoveEntry,
 } from '../hooks/usePortfolio';
+import { useRoster } from '../hooks/useCoach';
+import Breadcrumbs, { type Crumb } from '../components/Breadcrumbs';
+import DiverTrendlines from '../components/DiverTrendlines';
 import type { PortfolioEntry } from '../types/portfolio';
 
-function entryLabel(entry: PortfolioEntry): string {
-  return [entry.summary.dive_code, entry.summary.board].filter(Boolean).join(' · ') || 'Dive';
+function entryScore(entry: PortfolioEntry): string {
+  return entry.summary.total_score != null ? entry.summary.total_score.toFixed(2) : '—';
 }
 
-function entryMeta(entry: PortfolioEntry): string {
-  return entry.summary.total_score != null ? entry.summary.total_score.toFixed(2) : '—';
+function entryDate(entry: PortfolioEntry): string | null {
+  const iso = entry.summary.dived_at;
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function entryHref(diverId: string, entry: PortfolioEntry): string {
   return `/profile/${diverId}/dives/${entry.item_id}`;
 }
 
+type Tab = 'dives' | 'statistics';
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'dives', label: 'Dives' },
+  { value: 'statistics', label: 'Statistics' },
+];
+
+const BOARD_ORDER = ['1m', '3m', '5m', '7.5m', '10m'];
+
+function groupByBoard(entries: PortfolioEntry[]): [string, PortfolioEntry[]][] {
+  const groups = new Map<string, PortfolioEntry[]>();
+  entries.forEach((entry) => {
+    const board = entry.summary.board ?? 'Other';
+    if (!groups.has(board)) groups.set(board, []);
+    groups.get(board)!.push(entry);
+  });
+  return [...groups.entries()].sort(([a], [b]) => {
+    const ai = BOARD_ORDER.indexOf(a);
+    const bi = BOARD_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
 function PortfolioDetailPage(): JSX.Element {
   const { id, userId: ownerId } = useParams<{ id: string; userId?: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = usePortfolioDetail(id, ownerId);
-  // Only needed to resolve dive links in self-view — in owner (coach) view,
-  // dive detail isn't coach-accessible yet, so entries render as static tiles.
-  const { data: profile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: () => profileApi.get(),
-    enabled: !ownerId,
-  });
+  const { data: roster = [] } = useRoster(!!ownerId);
 
   const renamePortfolio = useRenamePortfolio(ownerId);
   const deletePortfolio = useDeletePortfolio(ownerId);
   const removeEntry = useRemoveEntry(ownerId);
 
+  const [tab, setTab] = useState<Tab>('dives');
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Cancelling (Escape, or the × button) unmounts/blurs the input — this
+  // flag tells the blur handler that was a dismissal, not a commit, so it
+  // doesn't save whatever was left typed.
+  const cancelledRenameRef = useRef(false);
 
-  const diverId = ownerId ? undefined : profile?.diver?.id;
+  const diverId = data?.diver_id;
   const backHref = ownerId ? `/roster/${ownerId}` : '/';
+  const portfolioHref = ownerId ? `/roster/${ownerId}/portfolios/${id}` : `/portfolios/${id}`;
+  const portfolioName = data?.portfolio.name ?? 'Portfolio';
+  const breadcrumbs: Crumb[] = ownerId
+    ? [
+        { label: 'Team', href: '/' },
+        { label: roster.find((d) => d.user_id === ownerId)?.name ?? 'Diver', href: backHref },
+        { label: portfolioName },
+      ]
+    : [{ label: 'Portfolios', href: '/' }, { label: portfolioName }];
+  // Same trail, but with the portfolio itself as a link — carried via router
+  // state into the dive detail page so its breadcrumb can show "came from
+  // this portfolio" instead of falling back to the generic diver/home trail.
+  const diveBreadcrumbPrefix: Crumb[] = breadcrumbs.map((c, i) =>
+    i === breadcrumbs.length - 1 ? { ...c, href: portfolioHref } : c,
+  );
 
   const startRenaming = () => {
     if (!data) return;
@@ -59,6 +102,19 @@ function PortfolioDetailPage(): JSX.Element {
     renamePortfolio.mutate({ id, name: name.trim() }, { onSuccess: () => setRenaming(false) });
   };
 
+  const handleRenameBlur = () => {
+    if (cancelledRenameRef.current) {
+      cancelledRenameRef.current = false;
+      return;
+    }
+    handleRename();
+  };
+
+  const cancelRenaming = () => {
+    cancelledRenameRef.current = true;
+    setRenaming(false);
+  };
+
   const handleDelete = () => {
     if (!id) return;
     deletePortfolio.mutate(id, { onSuccess: () => navigate(backHref) });
@@ -66,12 +122,9 @@ function PortfolioDetailPage(): JSX.Element {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <button
-        onClick={() => navigate(backHref)}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm mb-8 transition-colors cursor-pointer"
-      >
-        ← {ownerId ? 'Back to diver' : 'Back to portfolios'}
-      </button>
+      <div className="mb-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {isLoading && <div className="text-slate-500 text-sm">Loading…</div>}
       {isError && <div className="text-rose-400 text-sm">Failed to load portfolio.</div>}
@@ -80,23 +133,46 @@ function PortfolioDetailPage(): JSX.Element {
         <>
           <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             {renaming ? (
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-2xl font-bold
-                           focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={handleRenameBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRename();
+                    else if (e.key === 'Escape') cancelRenaming();
+                  }}
+                  className="text-2xl font-bold bg-transparent text-slate-100 border-0 border-b-2 border-cyan-500
+                             p-0 m-0 leading-8 focus:outline-none focus:ring-0"
+                />
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={cancelRenaming}
+                  aria-label="Cancel rename"
+                  title="Cancel"
+                  className="text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ) : (
-              <h1
-                onClick={startRenaming}
-                className="text-2xl font-bold cursor-pointer hover:text-cyan-400 transition-colors"
-                title="Click to rename"
-              >
-                {data.portfolio.name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold leading-8">{data.portfolio.name}</h1>
+                <button
+                  onClick={startRenaming}
+                  aria-label="Rename portfolio"
+                  title="Rename portfolio"
+                  className="text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
+              </div>
             )}
 
             {confirmingDelete ? (
@@ -127,34 +203,76 @@ function PortfolioDetailPage(): JSX.Element {
               Nothing here yet — add dives and competitions from their detail pages.
             </p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.entries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="group relative bg-slate-900 border border-slate-800 hover:border-cyan-500 rounded-2xl p-6 aspect-[4/3] transition duration-150"
-                >
+            <>
+              <div role="tablist" className="flex gap-6 border-b border-slate-800 mb-8">
+                {TABS.map(({ value, label }) => (
                   <button
-                    onClick={() => diverId && navigate(entryHref(diverId, entry))}
-                    disabled={!diverId}
-                    className={`flex flex-col justify-between h-full w-full text-left ${
-                      diverId ? 'cursor-pointer' : 'cursor-default'
+                    key={value}
+                    role="tab"
+                    aria-selected={tab === value}
+                    onClick={() => setTab(value)}
+                    className={`pb-3 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
+                      tab === value
+                        ? 'border-cyan-500 text-slate-100'
+                        : 'border-transparent text-slate-500 hover:text-slate-300'
                     }`}
                   >
-                    <span className="text-xs uppercase tracking-wide text-slate-500">Dive</span>
-                    <span className="text-lg font-semibold text-slate-100 group-hover:text-cyan-400 transition-colors truncate">
-                      {entryLabel(entry)}
-                    </span>
-                    <span className="text-slate-500 text-sm">{entryMeta(entry)}</span>
+                    {label}
                   </button>
-                  <button
-                    onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
-                    className="absolute top-3 right-3 text-slate-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    Remove
-                  </button>
+                ))}
+              </div>
+
+              {tab === 'statistics' && diverId && id && (
+                <DiverTrendlines diverId={diverId} fixedPortfolioId={id} />
+              )}
+
+              {tab === 'dives' && (
+                <div className="flex flex-col gap-8">
+                  {groupByBoard(data.entries).map(([board, entries]) => (
+                    <div key={board}>
+                      <h2 className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-3">
+                        {board}
+                      </h2>
+                      <div className="flex flex-col gap-3">
+                        {entries.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="group relative bg-slate-900 border border-slate-800 hover:border-cyan-500 rounded-xl transition duration-150"
+                          >
+                            <button
+                              onClick={() =>
+                                diverId &&
+                                navigate(entryHref(diverId, entry), {
+                                  state: { breadcrumbPrefix: diveBreadcrumbPrefix },
+                                })
+                              }
+                              disabled={!diverId}
+                              className={`flex items-center gap-4 w-full pl-5 pr-16 py-4 text-left ${
+                                diverId ? 'cursor-pointer' : 'cursor-default'
+                              }`}
+                            >
+                              <span className="font-mono text-lg font-semibold text-slate-100 group-hover:text-cyan-400 transition-colors">
+                                {entry.summary.dive_code ?? '—'}
+                              </span>
+                              {entryDate(entry) && (
+                                <span className="text-slate-500 text-sm">{entryDate(entry)}</span>
+                              )}
+                              <span className="text-slate-500 text-sm ml-auto shrink-0">{entryScore(entry)}</span>
+                            </button>
+                            <button
+                              onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
+                              className="absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </>
       )}
