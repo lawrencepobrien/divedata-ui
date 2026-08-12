@@ -17,6 +17,7 @@ import ProfileSetup from './pages/ProfileSetup';
 import CoachOverview from './pages/CoachOverview';
 import DiverOverview from './pages/DiverOverview';
 import PortfolioDetailPage from './pages/PortfolioDetailPage';
+import RosterDiverDetail from './pages/RosterDiverDetail';
 import CoachProfile from './pages/CoachProfile';
 import CoachRegister from './pages/CoachRegister';
 import InviteClaim from './pages/InviteClaim';
@@ -185,6 +186,8 @@ function App(): JSX.Element {
           <Route path="/register" element={<CoachRegister />} />
           <Route path="/invite/:token" element={<InviteClaim />} />
           <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
+          <Route path="/roster/:userId" element={<RosterDiverDetail />} />
+          <Route path="/roster/:userId/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route
             path="/profile/me/history"
             element={

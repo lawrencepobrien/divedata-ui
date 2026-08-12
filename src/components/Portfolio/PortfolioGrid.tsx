@@ -2,13 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePortfolios, useCreatePortfolio } from '../../hooks/usePortfolio';
 
-function PortfolioGrid(): JSX.Element {
-  const { data: portfolios = [], isLoading } = usePortfolios();
-  const createPortfolio = useCreatePortfolio();
+interface PortfolioGridProps {
+  ownerId?: string;
+}
+
+function PortfolioGrid({ ownerId }: PortfolioGridProps): JSX.Element {
+  const { data: portfolios = [], isLoading } = usePortfolios(ownerId);
+  const createPortfolio = useCreatePortfolio(ownerId);
   const navigate = useNavigate();
 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+
+  const detailHref = (portfolioId: string) =>
+    ownerId ? `/roster/${ownerId}/portfolios/${portfolioId}` : `/portfolios/${portfolioId}`;
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -16,7 +23,7 @@ function PortfolioGrid(): JSX.Element {
       onSuccess: (portfolio) => {
         setName('');
         setCreating(false);
-        navigate(`/portfolios/${portfolio.id}`);
+        navigate(detailHref(portfolio.id));
       },
     });
   };
@@ -43,7 +50,7 @@ function PortfolioGrid(): JSX.Element {
         {portfolios.map((portfolio) => (
           <button
             key={portfolio.id}
-            onClick={() => navigate(`/portfolios/${portfolio.id}`)}
+            onClick={() => navigate(detailHref(portfolio.id))}
             className="group flex flex-col justify-between text-left bg-slate-900 border border-slate-800 hover:border-cyan-500
                        rounded-2xl p-6 aspect-[4/3] transition duration-150 cursor-pointer"
           >

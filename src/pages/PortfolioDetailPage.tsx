@@ -23,20 +23,27 @@ function entryHref(diverId: string, entry: PortfolioEntry): string {
 }
 
 function PortfolioDetailPage(): JSX.Element {
-  const { id } = useParams<{ id: string }>();
+  const { id, userId: ownerId } = useParams<{ id: string; userId?: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = usePortfolioDetail(id);
-  const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: () => profileApi.get() });
+  const { data, isLoading, isError } = usePortfolioDetail(id, ownerId);
+  // Only needed to resolve dive links in self-view — in owner (coach) view,
+  // dive detail isn't coach-accessible yet, so entries render as static tiles.
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => profileApi.get(),
+    enabled: !ownerId,
+  });
 
-  const renamePortfolio = useRenamePortfolio();
-  const deletePortfolio = useDeletePortfolio();
-  const removeEntry = useRemoveEntry();
+  const renamePortfolio = useRenamePortfolio(ownerId);
+  const deletePortfolio = useDeletePortfolio(ownerId);
+  const removeEntry = useRemoveEntry(ownerId);
 
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const diverId = profile?.diver?.id;
+  const diverId = ownerId ? undefined : profile?.diver?.id;
+  const backHref = ownerId ? `/roster/${ownerId}` : '/';
 
   const startRenaming = () => {
     if (!data) return;
@@ -54,16 +61,16 @@ function PortfolioDetailPage(): JSX.Element {
 
   const handleDelete = () => {
     if (!id) return;
-    deletePortfolio.mutate(id, { onSuccess: () => navigate('/') });
+    deletePortfolio.mutate(id, { onSuccess: () => navigate(backHref) });
   };
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate(backHref)}
         className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-sm mb-8 transition-colors cursor-pointer"
       >
-        ← Back to portfolios
+        ← {ownerId ? 'Back to diver' : 'Back to portfolios'}
       </button>
 
       {isLoading && <div className="text-slate-500 text-sm">Loading…</div>}
@@ -129,7 +136,9 @@ function PortfolioDetailPage(): JSX.Element {
                   <button
                     onClick={() => diverId && navigate(entryHref(diverId, entry))}
                     disabled={!diverId}
-                    className="flex flex-col justify-between h-full w-full text-left cursor-pointer"
+                    className={`flex flex-col justify-between h-full w-full text-left ${
+                      diverId ? 'cursor-pointer' : 'cursor-default'
+                    }`}
                   >
                     <span className="text-xs uppercase tracking-wide text-slate-500">Dive</span>
                     <span className="text-lg font-semibold text-slate-100 group-hover:text-cyan-400 transition-colors truncate">

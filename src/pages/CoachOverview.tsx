@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { useRoster } from '../hooks/useCoach';
 
 function CoachOverview(): JSX.Element {
   const { data: roster = [], isLoading } = useRoster();
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
@@ -21,7 +23,13 @@ function CoachOverview(): JSX.Element {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {roster.map((diver) => (
-            <div key={diver.user_id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div
+              key={diver.user_id}
+              onClick={() => diver.has_profile && navigate(`/roster/${diver.user_id}`)}
+              className={`bg-slate-900 border border-slate-800 rounded-xl p-5 transition duration-150 ${
+                diver.has_profile ? 'hover:border-cyan-500 cursor-pointer' : ''
+              }`}
+            >
               <div className="flex items-center justify-between mb-1">
                 <p className="text-slate-100 font-medium">{diver.name || diver.email}</p>
                 {!diver.has_profile && (
