@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { DiverProfile } from '../types/profile';
-import { useTrainingDives, useDeleteTrainingDive } from '../hooks/useDiver';
+import { useDives, useDeleteDive } from '../hooks/useDiver';
 
 interface Props {
   diver: DiverProfile;
@@ -41,37 +41,37 @@ function DiverProfile({ diver }: Props): JSX.Element {
         ))}
       </div>
 
-      {diver.diver_id && (
-        <TrainingSection diverId={diver.diver_id} onAdd={() => navigate('/profile/me/training/new')} />
+      {diver.id && (
+        <DiveLogSection diverId={diver.id} onAdd={() => navigate('/profile/me/dives/new')} />
       )}
     </div>
   );
 }
 
-function TrainingSection({ diverId, onAdd }: { diverId: string; onAdd: () => void }): JSX.Element {
+function DiveLogSection({ diverId, onAdd }: { diverId: string; onAdd: () => void }): JSX.Element {
   const navigate = useNavigate();
-  const { data: dives = [], isLoading } = useTrainingDives(diverId);
-  const deleteDive = useDeleteTrainingDive(diverId);
+  const { data: dives = [], isLoading } = useDives(diverId);
+  const deleteDive = useDeleteDive(diverId);
 
   return (
     <div className="mt-10">
       <div className="bg-gradient-to-r from-cyan-500/10 to-transparent border border-cyan-900/40 rounded-xl px-5 py-4 mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Training Data</h2>
+          <h2 className="text-lg font-semibold text-slate-100">Logged Dives</h2>
           <p className="text-slate-400 text-sm">Dives you've logged outside of competition.</p>
         </div>
         <button
           onClick={onAdd}
           className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-lg px-4 py-2.5 text-sm transition duration-150 cursor-pointer shrink-0"
         >
-          + Add training dive
+          + Add dive
         </button>
       </div>
 
       {isLoading ? (
         <div className="text-slate-500 text-sm py-4">Loading…</div>
       ) : dives.length === 0 ? (
-        <p className="text-slate-500 text-sm">No training dives logged yet.</p>
+        <p className="text-slate-500 text-sm">No dives logged yet.</p>
       ) : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
           {dives.map((dive) => (
@@ -80,7 +80,7 @@ function TrainingSection({ diverId, onAdd }: { diverId: string; onAdd: () => voi
               className="flex items-center justify-between px-4 py-3 hover:bg-slate-800/40 transition-colors"
             >
               <button
-                onClick={() => navigate(`/profile/${diverId}/dives/training/${dive.id}`)}
+                onClick={() => navigate(`/profile/${diverId}/dives/${dive.id}`)}
                 className="flex items-center gap-3 text-left cursor-pointer flex-1 min-w-0"
               >
                 <span className="text-slate-200 text-sm font-mono">{dive.dive_code}</span>

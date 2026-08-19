@@ -5,16 +5,17 @@ import VideoFilePicker from './VideoFilePicker';
 
 interface Props {
   diverId: string;
-  source: 'competition' | 'training';
   diveId: string;
+  /** Coach viewing a roster diver's dive: can watch, but not upload/remove. */
+  readOnly?: boolean;
 }
 
 /** Video section for an existing dive: shows the player if a video exists, otherwise
  *  an upload button. Handles upload progress and removal. */
-export default function DiveVideoUpload({ diverId, source, diveId }: Props) {
-  const { data, isLoading } = useDiveMedia(diverId, source, diveId);
-  const upload = useUploadDiveVideo(diverId, source, diveId);
-  const remove = useDeleteDiveMedia(diverId, source, diveId);
+export default function DiveVideoUpload({ diverId, diveId, readOnly = false }: Props) {
+  const { data, isLoading } = useDiveMedia(diverId, diveId);
+  const upload = useUploadDiveVideo(diverId, diveId);
+  const remove = useDeleteDiveMedia(diverId, diveId);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,27 +52,37 @@ export default function DiveVideoUpload({ diverId, source, diveId }: Props) {
             controls
             className="w-full rounded-xl border border-slate-800 bg-black"
           />
-          <button
-            type="button"
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="text-rose-400 hover:text-rose-300 text-xs cursor-pointer transition-colors disabled:opacity-50"
-          >
-            {remove.isPending ? 'Removing…' : 'Remove video'}
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => remove.mutate()}
+              disabled={remove.isPending}
+              className="text-rose-400 hover:text-rose-300 text-xs cursor-pointer transition-colors disabled:opacity-50"
+            >
+              {remove.isPending ? 'Removing…' : 'Remove video'}
+            </button>
+          )}
         </div>
       ) : media && media.status === 'pending' ? (
         <div className="space-y-2">
-          <p className="text-amber-400 text-sm">A previous upload for this dive didn't finish.</p>
-          <button
-            type="button"
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="text-cyan-400 hover:text-cyan-300 text-xs cursor-pointer transition-colors disabled:opacity-50"
-          >
-            {remove.isPending ? 'Clearing…' : 'Clear it and upload again'}
-          </button>
+          <p className="text-amber-400 text-sm">
+            {readOnly
+              ? "This diver's video upload hasn't finished yet."
+              : "A previous upload for this dive didn't finish."}
+          </p>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => remove.mutate()}
+              disabled={remove.isPending}
+              className="text-cyan-400 hover:text-cyan-300 text-xs cursor-pointer transition-colors disabled:opacity-50"
+            >
+              {remove.isPending ? 'Clearing…' : 'Clear it and upload again'}
+            </button>
+          )}
         </div>
+      ) : readOnly ? (
+        <p className="text-slate-600 text-sm">No video for this dive.</p>
       ) : progress !== null ? (
         <UploadProgress progress={progress} />
       ) : (

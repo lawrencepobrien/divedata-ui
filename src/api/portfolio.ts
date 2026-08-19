@@ -6,14 +6,23 @@ export interface AddEntryRequest {
   item_id: string;
 }
 
+// base resolves the portfolio collection root: the caller's own ("/me/...")
+// when ownerId is omitted, or a specific diver's ("/users/:id/...") — the
+// latter also succeeds for that diver's active coach, per the backend's
+// resolvePortfolioOwner.
+function base(ownerId?: string): string {
+  return ownerId ? `/users/${ownerId}/portfolios` : '/me/portfolios';
+}
+
 export const portfolioApi = {
-  list: () => client.get<Portfolio[]>('/me/portfolios'),
-  get: (id: string) => client.get<PortfolioDetail>(`/me/portfolios/${id}`),
-  create: (name: string) => client.post<Portfolio>('/me/portfolios', { name }),
-  rename: (id: string, name: string) => client.patch<void>(`/me/portfolios/${id}`, { name }),
-  deletePortfolio: (id: string) => client.delete<void>(`/me/portfolios/${id}`),
-  addEntry: (portfolioId: string, body: AddEntryRequest) =>
-    client.post<PortfolioEntry>(`/me/portfolios/${portfolioId}/entries`, body),
-  removeEntry: (portfolioId: string, entryId: string) =>
-    client.delete<void>(`/me/portfolios/${portfolioId}/entries/${entryId}`),
+  list: (ownerId?: string) => client.get<Portfolio[]>(base(ownerId)),
+  get: (id: string, ownerId?: string) => client.get<PortfolioDetail>(`${base(ownerId)}/${id}`),
+  create: (name: string, ownerId?: string) => client.post<Portfolio>(base(ownerId), { name }),
+  rename: (id: string, name: string, ownerId?: string) =>
+    client.patch<void>(`${base(ownerId)}/${id}`, { name }),
+  deletePortfolio: (id: string, ownerId?: string) => client.delete<void>(`${base(ownerId)}/${id}`),
+  addEntry: (portfolioId: string, body: AddEntryRequest, ownerId?: string) =>
+    client.post<PortfolioEntry>(`${base(ownerId)}/${portfolioId}/entries`, body),
+  removeEntry: (portfolioId: string, entryId: string, ownerId?: string) =>
+    client.delete<void>(`${base(ownerId)}/${portfolioId}/entries/${entryId}`),
 };

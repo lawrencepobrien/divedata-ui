@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BoardType } from '../types/trendline';
-import { useCreateTrainingDive } from '../hooks/useDiver';
+import { useCreateDive } from '../hooks/useDiver';
 import { useDiveTypeLookup } from '../hooks/useDiveTypes';
 import { annotateJudgeScores, scoreMultiplier, sumRetainedJudgeScores } from '../lib/diveScoring';
 import VideoFilePicker from '../components/DiveVideo/VideoFilePicker';
@@ -23,9 +23,9 @@ interface Props {
   diverId: string;
 }
 
-export default function LogTrainingDivePage({ diverId }: Props) {
+export default function LogDivePage({ diverId }: Props) {
   const navigate = useNavigate();
-  const createDive = useCreateTrainingDive(diverId);
+  const createDive = useCreateDive(diverId);
 
   const [diveCode, setDiveCode] = useState('');
   const [board, setBoard] = useState<BoardType>('3m');
@@ -95,7 +95,7 @@ export default function LogTrainingDivePage({ diverId }: Props) {
           // saved, so surface the error and let them retry from the dive page.
           try {
             setUploadProgress(0);
-            await uploadDiveVideo(diverId, 'training', created.id, videoFile, setUploadProgress);
+            await uploadDiveVideo(diverId, created.id, videoFile, setUploadProgress);
             navigate('/profile/me');
           } catch (err) {
             setUploadProgress(null);
@@ -119,7 +119,7 @@ export default function LogTrainingDivePage({ diverId }: Props) {
         ← Back
       </button>
 
-      <h1 className="text-2xl font-bold mb-1">Log a Training Dive</h1>
+      <h1 className="text-2xl font-bold mb-1">Log a Dive</h1>
       <p className="text-slate-400 text-sm mb-8">Record a dive from practice.</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">

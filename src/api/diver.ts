@@ -5,35 +5,53 @@ import type { CompetitionResult } from '../types/history';
 import type {
   DiveScoreDetail,
   DiveScore,
-  TrainingDiveListEntry,
-  CreateTrainingDiveRequest,
+  DiveListEntry,
+  CreateDiveRequest,
 } from '../types/dive';
 
+// portfolioParam builds the trailing "&portfolio_id=..." query fragment,
+// or '' when scoping is off — appended to an already-built query string.
+function portfolioParam(portfolioId?: string): string {
+  return portfolioId ? `&portfolio_id=${encodeURIComponent(portfolioId)}` : '';
+}
+
 export const diversApi = {
-  getStats: (diverId: string, signal?: AbortSignal) =>
-    client.get<DiverStats>(`/divers/${diverId}/stats`, signal),
+  getStats: (diverId: string, portfolioId?: string, signal?: AbortSignal) =>
+    client.get<DiverStats>(
+      `/divers/${diverId}/stats${portfolioId ? `?portfolio_id=${encodeURIComponent(portfolioId)}` : ''}`,
+      signal,
+    ),
 
-  getEventTrendline: (diverId: string, discipline: Discipline, signal?: AbortSignal) =>
-    client.get<EventTrendline>(`/divers/${diverId}/trendline/events?discipline=${discipline}`, signal),
+  getEventTrendline: (diverId: string, discipline: Discipline, portfolioId?: string, signal?: AbortSignal) =>
+    client.get<EventTrendline>(
+      `/divers/${diverId}/trendline/events?discipline=${discipline}${portfolioParam(portfolioId)}`,
+      signal,
+    ),
 
-  getDiveTrendline: (diverId: string, diveCode: string, board: BoardType, signal?: AbortSignal) =>
-    client.get<DiveTrendline>(`/divers/${diverId}/trendline/dives?dive_code=${encodeURIComponent(diveCode)}&board=${encodeURIComponent(board)}`, signal),
+  getDiveTrendline: (
+    diverId: string,
+    diveCode: string,
+    board: BoardType,
+    portfolioId?: string,
+    signal?: AbortSignal,
+  ) =>
+    client.get<DiveTrendline>(
+      `/divers/${diverId}/trendline/dives?dive_code=${encodeURIComponent(diveCode)}&board=${encodeURIComponent(board)}${portfolioParam(portfolioId)}`,
+      signal,
+    ),
 
   getHistory: (diverId: string, signal?: AbortSignal) =>
     client.get<CompetitionResult[]>(`/divers/${diverId}/history`, signal),
 
-  getCompetitionDiveDetail: (diverId: string, scoreId: string, signal?: AbortSignal) =>
-    client.get<DiveScoreDetail>(`/divers/${diverId}/competition-dives/${scoreId}`, signal),
+  getDiveDetail: (diverId: string, diveId: string, signal?: AbortSignal) =>
+    client.get<DiveScoreDetail>(`/divers/${diverId}/dives/${diveId}`, signal),
 
-  getTrainingDiveDetail: (diverId: string, scoreId: string, signal?: AbortSignal) =>
-    client.get<DiveScoreDetail>(`/divers/${diverId}/training-dives/${scoreId}`, signal),
+  listDives: (diverId: string, signal?: AbortSignal) =>
+    client.get<DiveListEntry[]>(`/divers/${diverId}/dives`, signal),
 
-  listTrainingDives: (diverId: string, signal?: AbortSignal) =>
-    client.get<TrainingDiveListEntry[]>(`/divers/${diverId}/training-dives`, signal),
+  createDive: (diverId: string, body: CreateDiveRequest) =>
+    client.post<DiveScore>(`/divers/${diverId}/dives`, body),
 
-  createTrainingDive: (diverId: string, body: CreateTrainingDiveRequest) =>
-    client.post<DiveScore>(`/divers/${diverId}/training-dives`, body),
-
-  deleteTrainingDive: (diverId: string, scoreId: string) =>
-    client.delete<void>(`/divers/${diverId}/training-dives/${scoreId}`),
+  deleteDive: (diverId: string, scoreId: string) =>
+    client.delete<void>(`/divers/${diverId}/dives/${scoreId}`),
 };

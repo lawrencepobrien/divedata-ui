@@ -8,13 +8,11 @@ export interface CompDive {
 }
 
 export interface CompEvent {
-  id: string;
   discipline: Discipline;
   dives: CompDive[];
 }
 
 export interface CompetitionResult {
-  id: string;
   name: string;
   event_date: string | null;
   events: CompEvent[];

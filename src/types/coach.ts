@@ -15,6 +15,7 @@ export interface DiverInvite {
 
 export interface RosterEntry {
   user_id: string;
+  diver_id?: string;
   name: string;
   email: string;
   has_profile: boolean;

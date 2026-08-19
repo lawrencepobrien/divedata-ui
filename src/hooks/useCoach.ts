@@ -7,10 +7,11 @@ export const coachKeys = {
   invites: ['coach', 'invites'] as const,
 };
 
-export function useRoster() {
+export function useRoster(enabled: boolean = true) {
   return useQuery<RosterEntry[]>({
     queryKey: coachKeys.roster,
     queryFn: () => coachApi.listRoster(),
+    enabled,
   });
 }
 

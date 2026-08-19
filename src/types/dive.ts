@@ -3,6 +3,11 @@ export interface JudgeScoreDetail {
   score: number;
 }
 
+export interface Scores {
+  total: number | null;
+  judges: JudgeScoreDetail[];
+}
+
 export interface DiveScoreDetail {
   id: string;
   source: 'competition' | 'training';
@@ -10,10 +15,9 @@ export interface DiveScoreDetail {
   description: string;
   board: string;
   dive_order: number;
-  total_score: number | null;
+  scores: Scores | null;
   dived_at: string | null;
   competition: string;
-  judge_scores: JudgeScoreDetail[];
 }
 
 export interface DiveScore {
@@ -21,12 +25,12 @@ export interface DiveScore {
   diver_id: string;
   dive_code: string;
   board: string;
-  total_score: number | null;
+  scores: Scores | null;
   dived_at: string;
   created_at: string;
 }
 
-export interface TrainingDiveListEntry {
+export interface DiveListEntry {
   id: string;
   dive_code: string;
   board: string;
@@ -34,7 +38,7 @@ export interface TrainingDiveListEntry {
   dived_at: string;
 }
 
-export interface CreateTrainingDiveRequest {
+export interface CreateDiveRequest {
   dive_code: string;
   board: string;
   total_score: number | null;
