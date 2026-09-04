@@ -17,6 +17,9 @@ import ProfileSetup from './pages/ProfileSetup';
 import CoachOverview from './pages/CoachOverview';
 import DiverOverview from './pages/DiverOverview';
 import PortfolioDetailPage from './pages/PortfolioDetailPage';
+import CoachPortfolios from './pages/CoachPortfolios';
+import SharedWithMe from './pages/SharedWithMe';
+import { useIncomingShares } from './hooks/usePortfolioShare';
 import RosterDiverDetail from './pages/RosterDiverDetail';
 import CoachProfile from './pages/CoachProfile';
 import CoachRegister from './pages/CoachRegister';
@@ -51,6 +54,7 @@ function App(): JSX.Element {
     queryFn: () => profileApi.get(),
     enabled: authed,
   });
+  const { data: incomingShares = [] } = useIncomingShares(authed);
 
   const handleSignOut = () => keycloak.logout();
 
@@ -74,10 +78,20 @@ function App(): JSX.Element {
   const hasDiver = !!profile?.diver?.id;
   const isCoach = profile?.type === 'coach';
 
+  const pendingShareCount = incomingShares.filter((s) => s.status === 'pending').length;
+  const sharedLabel = pendingShareCount > 0 ? `Shared (${pendingShareCount})` : 'Shared';
+  const sharedNavItem: NavItem = {
+    label: sharedLabel,
+    to: '/shared',
+    active: pathname.startsWith('/shared'),
+  };
+
   const navItems: NavItem[] = isCoach
     ? [
         { label: 'Overview', to: '/', active: pathname === '/' },
         { label: 'Profile', to: '/profile/me', active: pathname === '/profile/me' },
+        { label: 'My Portfolios', to: '/portfolios', active: pathname.startsWith('/portfolios') },
+        sharedNavItem,
         { label: 'Register', to: '/register', active: pathname.startsWith('/register') },
         { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
       ]
@@ -102,6 +116,7 @@ function App(): JSX.Element {
               },
             ]
           : []),
+        sharedNavItem,
         { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
       ];
 
@@ -185,7 +200,10 @@ function App(): JSX.Element {
           />
           <Route path="/register" element={<CoachRegister />} />
           <Route path="/invite/:token" element={<InviteClaim />} />
+          <Route path="/portfolios" element={<CoachPortfolios />} />
           <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
+          <Route path="/shared" element={<SharedWithMe />} />
+          <Route path="/shared/:id" element={<PortfolioDetailPage shared />} />
           <Route path="/roster/:userId" element={<RosterDiverDetail />} />
           <Route path="/roster/:userId/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route

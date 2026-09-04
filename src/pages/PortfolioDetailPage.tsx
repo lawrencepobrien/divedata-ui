@@ -6,9 +6,11 @@ import {
   useDeletePortfolio,
   useRemoveEntry,
 } from '../hooks/usePortfolio';
+import { useSharedPortfolioDetail } from '../hooks/usePortfolioShare';
 import { useRoster } from '../hooks/useCoach';
 import Breadcrumbs, { type Crumb } from '../components/Breadcrumbs';
 import DiverTrendlines from '../components/DiverTrendlines';
+import SharePortfolioButton from '../components/Portfolio/SharePortfolioButton';
 import type { PortfolioEntry } from '../types/portfolio';
 
 function entryScore(entry: PortfolioEntry): string {
@@ -21,8 +23,12 @@ function entryDate(entry: PortfolioEntry): string | null {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function entryHref(diverId: string, entry: PortfolioEntry): string {
-  return `/profile/${diverId}/dives/${entry.item_id}`;
+function entryHref(entry: PortfolioEntry): string | null {
+  // A coach's own portfolio can hold dives from several divers, so the link
+  // target comes from the entry's own summary rather than a single
+  // portfolio-level diver id.
+  const diverId = entry.summary.diver_id;
+  return diverId ? `/profile/${diverId}/dives/${entry.item_id}` : null;
 }
 
 type Tab = 'dives' | 'statistics';
@@ -51,11 +57,22 @@ function groupByBoard(entries: PortfolioEntry[]): [string, PortfolioEntry[]][] {
   });
 }
 
-function PortfolioDetailPage(): JSX.Element {
+interface Props {
+  /** Read-only view of a portfolio someone else shared with the caller. */
+  shared?: boolean;
+}
+
+function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
   const { id, userId: ownerId } = useParams<{ id: string; userId?: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = usePortfolioDetail(id, ownerId);
+  const ownDetail = usePortfolioDetail(shared ? undefined : id, ownerId);
+  const sharedDetail = useSharedPortfolioDetail(shared ? id : undefined);
+  const { data, isLoading, isError } = shared ? sharedDetail : ownDetail;
   const { data: roster = [] } = useRoster(!!ownerId);
+  // The owner can share a portfolio only when viewing it as themself — not
+  // through the coach-manages-a-diver's-portfolio path, and not a shared
+  // (read-only) view of someone else's.
+  const canManage = !ownerId && !shared;
 
   const renamePortfolio = useRenamePortfolio(ownerId);
   const deletePortfolio = useDeletePortfolio(ownerId);
@@ -71,16 +88,25 @@ function PortfolioDetailPage(): JSX.Element {
   const cancelledRenameRef = useRef(false);
 
   const diverId = data?.diver_id;
-  const backHref = ownerId ? `/roster/${ownerId}` : '/';
-  const portfolioHref = ownerId ? `/roster/${ownerId}/portfolios/${id}` : `/portfolios/${id}`;
+  // Statistics needs one fixed diver to chart — blank for a coach's own
+  // portfolio, which can mix dives from several divers.
+  const availableTabs = diverId ? TABS : TABS.filter((t) => t.value !== 'statistics');
+  const backHref = shared ? '/shared' : ownerId ? `/roster/${ownerId}` : '/';
+  const portfolioHref = shared
+    ? `/shared/${id}`
+    : ownerId
+      ? `/roster/${ownerId}/portfolios/${id}`
+      : `/portfolios/${id}`;
   const portfolioName = data?.portfolio.name ?? 'Portfolio';
-  const breadcrumbs: Crumb[] = ownerId
-    ? [
-        { label: 'Team', href: '/' },
-        { label: roster.find((d) => d.user_id === ownerId)?.name ?? 'Diver', href: backHref },
-        { label: portfolioName },
-      ]
-    : [{ label: 'Portfolios', href: '/' }, { label: portfolioName }];
+  const breadcrumbs: Crumb[] = shared
+    ? [{ label: 'Shared with you', href: '/shared' }, { label: portfolioName }]
+    : ownerId
+      ? [
+          { label: 'Team', href: '/' },
+          { label: roster.find((d) => d.user_id === ownerId)?.name ?? 'Diver', href: backHref },
+          { label: portfolioName },
+        ]
+      : [{ label: 'Portfolios', href: '/' }, { label: portfolioName }];
   // Same trail, but with the portfolio itself as a link — carried via router
   // state into the dive detail page so its breadcrumb can show "came from
   // this portfolio" instead of falling back to the generic diver/home trail.
@@ -161,51 +187,60 @@ function PortfolioDetailPage(): JSX.Element {
             ) : (
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold leading-8">{data.portfolio.name}</h1>
-                <button
-                  onClick={startRenaming}
-                  aria-label="Rename portfolio"
-                  title="Rename portfolio"
-                  className="text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                  </svg>
-                </button>
+                {!shared && (
+                  <button
+                    onClick={startRenaming}
+                    aria-label="Rename portfolio"
+                    title="Rename portfolio"
+                    className="text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  </button>
+                )}
               </div>
             )}
 
-            {confirmingDelete ? (
-              <div className="flex items-center gap-3 text-sm">
-                <span className="text-slate-400">Delete this portfolio?</span>
-                <button onClick={handleDelete} className="text-rose-400 hover:text-rose-300 cursor-pointer">
-                  Yes
-                </button>
-                <button
-                  onClick={() => setConfirmingDelete(false)}
-                  className="text-slate-500 hover:text-slate-300 cursor-pointer"
-                >
-                  No
-                </button>
+            {!shared && (
+              <div className="flex items-center gap-4">
+                {canManage && id && <SharePortfolioButton portfolioId={id} />}
+                {confirmingDelete ? (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-slate-400">Delete this portfolio?</span>
+                    <button onClick={handleDelete} className="text-rose-400 hover:text-rose-300 cursor-pointer">
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setConfirmingDelete(false)}
+                      className="text-slate-500 hover:text-slate-300 cursor-pointer"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="text-slate-500 hover:text-rose-400 text-sm cursor-pointer transition-colors"
+                  >
+                    Delete portfolio
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                onClick={() => setConfirmingDelete(true)}
-                className="text-slate-500 hover:text-rose-400 text-sm cursor-pointer transition-colors"
-              >
-                Delete portfolio
-              </button>
             )}
           </div>
 
           {data.entries.length === 0 ? (
             <p className="text-slate-500 text-sm">
-              Nothing here yet — add dives and competitions from their detail pages.
+              {shared
+                ? 'Nothing in this portfolio yet.'
+                : 'Nothing here yet — add dives and competitions from their detail pages.'}
             </p>
           ) : (
             <>
               <div role="tablist" className="flex gap-6 border-b border-slate-800 mb-8">
-                {TABS.map(({ value, label }) => (
+                {availableTabs.map(({ value, label }) => (
                   <button
                     key={value}
                     role="tab"
@@ -234,21 +269,23 @@ function PortfolioDetailPage(): JSX.Element {
                         {board}
                       </h2>
                       <div className="flex flex-col gap-3">
-                        {entries.map((entry) => (
+                        {entries.map((entry) => {
+                          const href = entryHref(entry);
+                          return (
                           <div
                             key={entry.id}
                             className="group relative bg-slate-900 border border-slate-800 hover:border-cyan-500 rounded-xl transition duration-150"
                           >
                             <button
                               onClick={() =>
-                                diverId &&
-                                navigate(entryHref(diverId, entry), {
+                                href &&
+                                navigate(href, {
                                   state: { breadcrumbPrefix: diveBreadcrumbPrefix },
                                 })
                               }
-                              disabled={!diverId}
+                              disabled={!href}
                               className={`flex items-center gap-4 w-full pl-5 pr-16 py-4 text-left ${
-                                diverId ? 'cursor-pointer' : 'cursor-default'
+                                href ? 'cursor-pointer' : 'cursor-default'
                               }`}
                             >
                               <span className="font-mono text-lg font-semibold text-slate-100 group-hover:text-cyan-400 transition-colors">
@@ -259,14 +296,17 @@ function PortfolioDetailPage(): JSX.Element {
                               )}
                               <span className="text-slate-500 text-sm ml-auto shrink-0">{entryScore(entry)}</span>
                             </button>
-                            <button
-                              onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
-                              className="absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            >
-                              Remove
-                            </button>
+                            {!shared && (
+                              <button
+                                onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
+                                className="absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}

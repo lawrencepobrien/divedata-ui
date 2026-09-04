@@ -34,16 +34,17 @@ export default function DiveDetailPage() {
     scoreId,
   );
 
-  // Add-to-portfolio and video upload/management are self-service only —
-  // a coach viewing a roster diver's dive can see it, but not act on it.
+  // Video upload/management is self-service only — a coach viewing a roster
+  // diver's dive can see it, but not act on it. (Add-to-portfolio differs: a
+  // coach can add it to their own portfolio, see rosterDiver below.)
   const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: () => profileApi.get() });
   const isOwner = !!diverId && profile?.diver?.id === diverId;
 
-  // Only need roster data (for the diver's name) once we know the viewer
-  // isn't the dive's owner, and only as a fallback when we didn't arrive
-  // with a breadcrumbPrefix already — avoids a doomed /coach/roster call
-  // for every diver loading their own dive.
-  const { data: roster = [] } = useRoster(!breadcrumbPrefix && profile !== undefined && !isOwner);
+  // Only need roster data once we know the viewer isn't the dive's owner —
+  // avoids a doomed /coach/roster call for every diver loading their own
+  // dive. Used both as a breadcrumb fallback and to tell whether a coach
+  // may add this roster diver's dive to their own portfolio below.
+  const { data: roster = [] } = useRoster(profile !== undefined && !isOwner);
   const rosterDiver = !isOwner ? roster.find((d) => d.diver_id === diverId) : undefined;
 
   const diveLabel = dive?.dive_code || dive?.description || 'Dive';
@@ -66,7 +67,7 @@ export default function DiveDetailPage() {
     <div className="max-w-2xl mx-auto px-6 py-10">
       <div className="flex items-center justify-between mb-8">
         <Breadcrumbs items={breadcrumbs} />
-        {dive && isOwner && (
+        {dive && (isOwner || rosterDiver) && (
           <AddToPortfolioButton itemType="dive" itemId={dive.id} />
         )}
       </div>

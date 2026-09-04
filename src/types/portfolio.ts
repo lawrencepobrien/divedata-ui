@@ -14,6 +14,7 @@ export interface PortfolioEntrySummary {
   dived_at?: string;
   competition_name?: string;
   event_date?: string;
+  diver_id?: string;
 }
 
 export interface PortfolioEntry {

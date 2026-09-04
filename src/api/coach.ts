@@ -1,5 +1,6 @@
 import { client } from './client';
 import { DiverInvite, RosterEntry } from '../types/coach';
+import { CoachSummary } from '../types/portfolioShare';
 
 export interface CreateInviteRequest {
   email: string;
@@ -12,6 +13,7 @@ export const coachApi = {
   createInvite: (body: CreateInviteRequest) =>
     client.post<DiverInvite>('/coach/invites', body),
   revokeInvite: (id: string) => client.delete<void>(`/coach/invites/${id}`),
+  listMyCoaches: () => client.get<CoachSummary[]>('/me/coaches'),
 };
 
 export const invitesApi = {
