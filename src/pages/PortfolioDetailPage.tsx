@@ -88,10 +88,14 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
   const cancelledRenameRef = useRef(false);
 
   const diverId = data?.diver_id;
+  // The roster route (/roster/:diverId) is keyed by dd_divers.id, distinct
+  // from ownerId here (dd_users.id, from /roster/:userId/portfolios/:id) —
+  // resolve the diver's roster entry to link back to the right id.
+  const rosterOwner = ownerId ? roster.find((d) => d.user_id === ownerId) : undefined;
   // Statistics needs one fixed diver to chart — blank for a coach's own
   // portfolio, which can mix dives from several divers.
   const availableTabs = diverId ? TABS : TABS.filter((t) => t.value !== 'statistics');
-  const backHref = shared ? '/shared' : ownerId ? `/roster/${ownerId}` : '/';
+  const backHref = shared ? '/shared' : rosterOwner ? `/roster/${rosterOwner.diver_id}` : '/';
   const portfolioHref = shared
     ? `/shared/${id}`
     : ownerId
@@ -103,7 +107,7 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
     : ownerId
       ? [
           { label: 'Team', href: '/' },
-          { label: roster.find((d) => d.user_id === ownerId)?.name ?? 'Diver', href: backHref },
+          { label: rosterOwner?.name ?? 'Diver', href: backHref },
           { label: portfolioName },
         ]
       : [{ label: 'Portfolios', href: '/' }, { label: portfolioName }];

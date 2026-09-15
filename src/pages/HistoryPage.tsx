@@ -3,9 +3,12 @@ import { useCompetitionHistory } from '../hooks/useDiver';
 
 interface Props {
   diverId: string;
+  /** true when rendered as tab content inside another page — skips the
+   * outer page wrapper/heading, which the caller already provides. */
+  bare?: boolean;
 }
 
-export default function HistoryPage({ diverId }: Props) {
+export default function HistoryPage({ diverId, bare = false }: Props) {
   const navigate = useNavigate();
   const { data: history = [], isLoading } = useCompetitionHistory(diverId);
 
@@ -16,9 +19,7 @@ export default function HistoryPage({ diverId }: Props) {
     return <p className="text-slate-500 text-sm">No competition history yet.</p>;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
-      <h1 className="text-3xl font-bold mb-8">Competition History</h1>
+  const list = (
       <div className="flex flex-col gap-4">
         {history.map((comp) => (
           <div
@@ -66,6 +67,14 @@ export default function HistoryPage({ diverId }: Props) {
           </div>
         ))}
       </div>
+  );
+
+  if (bare) return list;
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-12">
+      <h1 className="text-3xl font-bold mb-8">Competition History</h1>
+      {list}
     </div>
   );
 }

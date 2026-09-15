@@ -1,5 +1,5 @@
 import { client } from './client';
-import { DiverInvite, RosterEntry } from '../types/coach';
+import { CreateRosterDiverRequest, DiverInvite, RosterEntry } from '../types/coach';
 import { CoachSummary } from '../types/portfolioShare';
 
 export interface CreateInviteRequest {
@@ -9,6 +9,8 @@ export interface CreateInviteRequest {
 
 export const coachApi = {
   listRoster: () => client.get<RosterEntry[]>('/coach/roster'),
+  createRosterDiver: (body: CreateRosterDiverRequest) =>
+    client.post<RosterEntry>('/coach/roster', body),
   listInvites: () => client.get<DiverInvite[]>('/coach/invites'),
   createInvite: (body: CreateInviteRequest) =>
     client.post<DiverInvite>('/coach/invites', body),

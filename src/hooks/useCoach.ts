@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { coachApi, invitesApi, CreateInviteRequest } from '../api/coach';
-import type { DiverInvite, RosterEntry } from '../types/coach';
+import type { CreateRosterDiverRequest, DiverInvite, RosterEntry } from '../types/coach';
 
 export const coachKeys = {
   roster: ['coach', 'roster'] as const,
@@ -12,6 +12,14 @@ export function useRoster(enabled: boolean = true) {
     queryKey: coachKeys.roster,
     queryFn: () => coachApi.listRoster(),
     enabled,
+  });
+}
+
+export function useCreateRosterDiver() {
+  const qc = useQueryClient();
+  return useMutation<RosterEntry, Error, CreateRosterDiverRequest>({
+    mutationFn: (body) => coachApi.createRosterDiver(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: coachKeys.roster }),
   });
 }
 

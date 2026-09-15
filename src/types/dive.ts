@@ -44,6 +44,25 @@ export interface CreateDiveRequest {
   total_score: number | null;
   dived_at: string;
   judge_scores: number[];
+  // Competition context — omitted/empty means a training dive.
+  competition_name?: string;
+  competition_location?: string;
+  competition_event?: string;
+}
+
+export interface CreateCompetitionDiveRequest {
+  dive_code: string;
+  total_score: number | null;
+  judge_scores: number[];
+}
+
+export interface CreateCompetitionRequest {
+  competition_name: string;
+  competition_location?: string;
+  competition_event?: string;
+  board: string;
+  dived_at: string;
+  dives: CreateCompetitionDiveRequest[];
 }
 
 export interface DiveType {

@@ -12,7 +12,7 @@ import HistoryPage from './pages/HistoryPage';
 import StatisticsPage from './pages/StatisticsPage';
 import DiveDetailPage from './pages/DiveDetailPage';
 import CompetitionPlaceholderPage from './pages/CompetitionPlaceholderPage';
-import LogDivePage from './pages/LogDivePage';
+import EditDivePage from './pages/EditDivePage';
 import ProfileSetup from './pages/ProfileSetup';
 import CoachOverview from './pages/CoachOverview';
 import DiverOverview from './pages/DiverOverview';
@@ -89,7 +89,6 @@ function App(): JSX.Element {
   const navItems: NavItem[] = isCoach
     ? [
         { label: 'Overview', to: '/', active: pathname === '/' },
-        { label: 'Profile', to: '/profile/me', active: pathname === '/profile/me' },
         { label: 'My Portfolios', to: '/portfolios', active: pathname.startsWith('/portfolios') },
         sharedNavItem,
         { label: 'Register', to: '/register', active: pathname.startsWith('/register') },
@@ -188,7 +187,7 @@ function App(): JSX.Element {
             path="/"
             element={
               isCoach ? (
-                <CoachOverview />
+                <CoachOverview coachName={profile?.coach?.name} />
               ) : (
                 <DiverOverview fullName={user?.full_name} hasDiver={hasDiver} diverId={profile?.diver?.id} />
               )
@@ -204,7 +203,7 @@ function App(): JSX.Element {
           <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route path="/shared" element={<SharedWithMe />} />
           <Route path="/shared/:id" element={<PortfolioDetailPage shared />} />
-          <Route path="/roster/:userId" element={<RosterDiverDetail />} />
+          <Route path="/roster/:diverId" element={<RosterDiverDetail />} />
           <Route path="/roster/:userId/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route
             path="/profile/me/history"
@@ -223,14 +222,6 @@ function App(): JSX.Element {
             }
           />
           <Route
-            path="/profile/me/dives/new"
-            element={
-              hasDiver
-                ? <LogDivePage diverId={profile!.diver!.id} />
-                : <div className="max-w-4xl mx-auto px-6 py-12">{profileContent}</div>
-            }
-          />
-          <Route
             path="/setup"
             element={
               <div className="max-w-4xl mx-auto px-6 py-12">
@@ -242,6 +233,7 @@ function App(): JSX.Element {
             path="/profile/:diverId/dives/:scoreId"
             element={<div className="max-w-4xl mx-auto"><DiveDetailPage /></div>}
           />
+          <Route path="/profile/:diverId/dives/:scoreId/edit" element={<EditDivePage />} />
           <Route
             path="/profile/:diverId/competitions"
             element={<div className="max-w-4xl mx-auto"><CompetitionPlaceholderPage /></div>}

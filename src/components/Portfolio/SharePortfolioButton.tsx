@@ -32,8 +32,12 @@ function SharePortfolioButton({ portfolioId }: Props): JSX.Element {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sharing requires the recipient to log in and view it, so a roster diver
+  // with no linked account isn't a valid candidate.
   const candidates = isCoach
-    ? roster.filter((d) => d.has_profile).map((d) => ({ id: d.user_id, label: d.name || d.email }))
+    ? roster
+        .filter((d): d is typeof d & { user_id: string } => !!d.user_id)
+        .map((d) => ({ id: d.user_id, label: d.name || d.email }))
     : coaches.map((c) => ({ id: c.user_id, label: c.name || c.email }));
 
   const alreadyShared = new Set(shares.filter((s) => s.status !== 'declined').map((s) => s.recipient_id));

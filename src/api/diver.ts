@@ -7,6 +7,7 @@ import type {
   DiveScore,
   DiveListEntry,
   CreateDiveRequest,
+  CreateCompetitionRequest,
 } from '../types/dive';
 
 // portfolioParam builds the trailing "&portfolio_id=..." query fragment,
@@ -51,6 +52,12 @@ export const diversApi = {
 
   createDive: (diverId: string, body: CreateDiveRequest) =>
     client.post<DiveScore>(`/divers/${diverId}/dives`, body),
+
+  createCompetitionDives: (diverId: string, body: CreateCompetitionRequest) =>
+    client.post<DiveScore[]>(`/divers/${diverId}/competitions`, body),
+
+  updateDive: (diverId: string, scoreId: string, body: CreateDiveRequest) =>
+    client.patch<DiveScore>(`/divers/${diverId}/dives/${scoreId}`, body),
 
   deleteDive: (diverId: string, scoreId: string) =>
     client.delete<void>(`/divers/${diverId}/dives/${scoreId}`),

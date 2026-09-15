@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { profileApi } from '../api/profile';
 import { useDiveDetail } from '../hooks/useDiver';
@@ -23,6 +23,7 @@ export default function DiveDetailPage() {
     scoreId: string;
   }>();
   const location = useLocation();
+  const navigate = useNavigate();
   // Set by PortfolioDetailPage when navigating here from one of its entries,
   // so the trail can show the actual portfolio instead of the generic
   // diver/home fallback below — absent for any other entry point (trends
@@ -34,9 +35,6 @@ export default function DiveDetailPage() {
     scoreId,
   );
 
-  // Video upload/management is self-service only — a coach viewing a roster
-  // diver's dive can see it, but not act on it. (Add-to-portfolio differs: a
-  // coach can add it to their own portfolio, see rosterDiver below.)
   const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: () => profileApi.get() });
   const isOwner = !!diverId && profile?.diver?.id === diverId;
 
@@ -58,7 +56,7 @@ export default function DiveDetailPage() {
             { label: 'Team', href: '/' },
             {
               label: rosterDiver?.name ?? 'Diver',
-              href: rosterDiver ? `/roster/${rosterDiver.user_id}` : '/',
+              href: rosterDiver ? `/roster/${rosterDiver.diver_id}` : '/',
             },
             { label: diveLabel },
           ];
@@ -67,9 +65,19 @@ export default function DiveDetailPage() {
     <div className="max-w-2xl mx-auto px-6 py-10">
       <div className="flex items-center justify-between mb-8">
         <Breadcrumbs items={breadcrumbs} />
-        {dive && (isOwner || rosterDiver) && (
-          <AddToPortfolioButton itemType="dive" itemId={dive.id} />
-        )}
+        <div className="flex items-center gap-4">
+          {dive && dive.source === 'training' && (isOwner || rosterDiver) && (
+            <button
+              onClick={() => navigate(`/profile/${diverId}/dives/${scoreId}/edit`)}
+              className="text-slate-400 hover:text-slate-200 text-sm transition-colors cursor-pointer"
+            >
+              Edit
+            </button>
+          )}
+          {dive && (isOwner || rosterDiver) && (
+            <AddToPortfolioButton itemType="dive" itemId={dive.id} />
+          )}
+        </div>
       </div>
 
       {isLoading && (
@@ -155,7 +163,7 @@ export default function DiveDetailPage() {
           {/* Video */}
           {diverId && scoreId && (
             <div className="border-t border-slate-800 pt-6">
-              <DiveVideoUpload diverId={diverId} diveId={scoreId} readOnly={!isOwner} />
+              <DiveVideoUpload diverId={diverId} diveId={scoreId} readOnly={!isOwner && !rosterDiver} />
             </div>
           )}
         </div>

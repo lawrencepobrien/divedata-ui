@@ -8,6 +8,7 @@ import type {
   DiveScore,
   DiveListEntry,
   CreateDiveRequest,
+  CreateCompetitionRequest,
 } from '../types/dive';
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes — competition data doesn't change in real time
@@ -93,6 +94,9 @@ function invalidateDiveQueries(qc: ReturnType<typeof useQueryClient>, diverId: s
   qc.invalidateQueries({ queryKey: diverKeys.dives(diverId) });
   qc.invalidateQueries({ queryKey: diverKeys.stats(diverId) });
   qc.invalidateQueries({ queryKey: diverKeys.diveTrendlinePrefix(diverId) });
+  // A competition dive shows up in history, not the dives list — invalidate
+  // both rather than branching on which mode a create came from.
+  qc.invalidateQueries({ queryKey: diverKeys.history(diverId) });
 }
 
 export function useCreateDive(diverId: string) {
@@ -100,6 +104,25 @@ export function useCreateDive(diverId: string) {
   return useMutation<DiveScore, Error, CreateDiveRequest>({
     mutationFn: (body) => diversApi.createDive(diverId, body),
     onSuccess: () => invalidateDiveQueries(qc, diverId),
+  });
+}
+
+export function useCreateCompetitionDives(diverId: string) {
+  const qc = useQueryClient();
+  return useMutation<DiveScore[], Error, CreateCompetitionRequest>({
+    mutationFn: (body) => diversApi.createCompetitionDives(diverId, body),
+    onSuccess: () => invalidateDiveQueries(qc, diverId),
+  });
+}
+
+export function useUpdateDive(diverId: string) {
+  const qc = useQueryClient();
+  return useMutation<DiveScore, Error, { diveId: string; body: CreateDiveRequest }>({
+    mutationFn: ({ diveId, body }) => diversApi.updateDive(diverId, diveId, body),
+    onSuccess: (_, { diveId }) => {
+      invalidateDiveQueries(qc, diverId);
+      qc.invalidateQueries({ queryKey: diverKeys.diveDetail(diverId, diveId) });
+    },
   });
 }
 

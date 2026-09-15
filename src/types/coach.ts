@@ -13,9 +13,18 @@ export interface DiverInvite {
   expires_at: string;
 }
 
+export interface CreateRosterDiverRequest {
+  name: string;
+  age?: number;
+  fina_age?: number;
+  gender?: string;
+  country?: string;
+  city?: string;
+}
+
 export interface RosterEntry {
-  user_id: string;
-  diver_id?: string;
+  user_id?: string;
+  diver_id: string;
   name: string;
   email: string;
   has_profile: boolean;
