@@ -19,9 +19,11 @@ interface Props {
   diverId: string;
   open: boolean;
   onClose: () => void;
+  /** Fires once per dive saved, so a caller can file it somewhere (a portfolio). */
+  onDiveLogged?: (diveId: string) => void;
 }
 
-export default function LogDiveModal({ diverId, open, onClose }: Props) {
+export default function LogDiveModal({ diverId, open, onClose, onDiveLogged }: Props) {
   const [mode, setMode] = useState<Mode>('dive');
 
   useEffect(() => {
@@ -77,10 +79,10 @@ export default function LogDiveModal({ diverId, open, onClose }: Props) {
             hidden with visibility (not display) so it still occupies space. */}
         <div className="grid">
           <div className={`col-start-1 row-start-1 ${mode === 'dive' ? '' : 'invisible pointer-events-none'}`}>
-            <DiveModeForm diverId={diverId} onDone={onClose} />
+            <DiveModeForm diverId={diverId} onDone={onClose} onDiveLogged={onDiveLogged} />
           </div>
           <div className={`col-start-1 row-start-1 ${mode === 'competition' ? '' : 'invisible pointer-events-none'}`}>
-            <CompetitionForm diverId={diverId} onDone={onClose} />
+            <CompetitionForm diverId={diverId} onDone={onClose} onDiveLogged={onDiveLogged} />
           </div>
         </div>
       </div>
@@ -90,7 +92,15 @@ export default function LogDiveModal({ diverId, open, onClose }: Props) {
 
 // Logs a single dive — training or competition, toggled by the radio button
 // below rather than as a separate top-level mode.
-function DiveModeForm({ diverId, onDone }: { diverId: string; onDone: () => void }) {
+function DiveModeForm({
+  diverId,
+  onDone,
+  onDiveLogged,
+}: {
+  diverId: string;
+  onDone: () => void;
+  onDiveLogged?: (diveId: string) => void;
+}) {
   const createDive = useCreateDive(diverId);
   const [isCompetition, setIsCompetition] = useState(false);
   const [compName, setCompName] = useState('');
@@ -119,6 +129,7 @@ function DiveModeForm({ diverId, onDone }: { diverId: string; onDone: () => void
 
     createDive.mutate(finalPayload, {
       onSuccess: async (created) => {
+        onDiveLogged?.(created.id);
         if (isCompetition || !videoFile) {
           onDone();
           return;
@@ -243,7 +254,15 @@ interface CompetitionDiveRow {
 }
 
 // Logs a whole competition event (one board/discipline) at once.
-function CompetitionForm({ diverId, onDone }: { diverId: string; onDone: () => void }) {
+function CompetitionForm({
+  diverId,
+  onDone,
+  onDiveLogged,
+}: {
+  diverId: string;
+  onDone: () => void;
+  onDiveLogged?: (diveId: string) => void;
+}) {
   const createCompetition = useCreateCompetitionDives(diverId);
   const [compName, setCompName] = useState('');
   const [compLocation, setCompLocation] = useState('');
@@ -282,7 +301,10 @@ function CompetitionForm({ diverId, onDone }: { diverId: string; onDone: () => v
         })),
       },
       {
-        onSuccess: () => onDone(),
+        onSuccess: (created) => {
+          created.forEach((dive) => onDiveLogged?.(dive.id));
+          onDone();
+        },
         onError: (err) => setError(err instanceof Error ? err.message : 'Failed to save competition'),
       },
     );

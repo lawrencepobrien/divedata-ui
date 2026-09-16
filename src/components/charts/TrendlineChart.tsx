@@ -40,33 +40,79 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 // Merge series onto a shared sorted date axis.
-// Each row has one key per series; null where that series has no data on that date.
+// Each row has one key per series; null where that series has no data on that row.
+//
+// Rows are keyed by date *and* label, not date alone: a meet's prelim and final
+// are separate events that usually carry the same timestamp, so keying on date
+// would silently overwrite one with the other. Points that genuinely belong
+// together — several dive codes from the same meet, or several divers in the
+// same event — still share a label and so still share a row. Lines set
+// connectNulls, so the extra rows don't introduce gaps.
 function mergeData(series: TrendlineSeries[]): Record<string, unknown>[] {
   const rowMap = new Map<string, Record<string, unknown>>();
 
   series.forEach((s) => {
     s.points.forEach((pt) => {
       const dateKey = pt.date ?? '__null__';
-      if (!rowMap.has(dateKey)) {
-        rowMap.set(dateKey, {
+      const rowKey = `${dateKey}||${pt.label}`;
+      if (!rowMap.has(rowKey)) {
+        rowMap.set(rowKey, {
+          // _key is the XAxis dataKey and must be unique per row. Using the
+          // display date there instead looks fine but silently breaks the
+          // tooltip: Recharts resolves the hovered category by *value*, so
+          // every row sharing a "Nov 2024" label returned the first such
+          // row's data. The axis shows _displayDate via tickFormatter.
+          _key: rowKey,
           _date: pt.date,
           _displayDate: formatDate(pt.date),
           _label: pt.label,
         });
       }
-      rowMap.get(dateKey)![s.key] = pt.score;
-      rowMap.get(dateKey)![`${s.key}__id`] = pt.id ?? null;
-      rowMap.get(dateKey)![`${s.key}__source`] = pt.source ?? null;
+      rowMap.get(rowKey)![s.key] = pt.score;
+      rowMap.get(rowKey)![`${s.key}__id`] = pt.id ?? null;
+      rowMap.get(rowKey)![`${s.key}__source`] = pt.source ?? null;
     });
   });
 
   return [...rowMap.entries()]
     .sort(([a], [b]) => {
-      if (a === '__null__') return 1;
-      if (b === '__null__') return -1;
+      const aNull = a.startsWith('__null__');
+      const bNull = b.startsWith('__null__');
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
       return a.localeCompare(b);
     })
     .map(([, row]) => row);
+}
+
+// Recharts defaults the Y domain to [0, max], which pins a 270-360 event
+// trendline to the very top of the plot. Fit the axis to the data instead,
+// padding evenly above and below so the line sits in the middle. The bounds
+// are rounded outward to a round step so the ticks stay readable.
+function niceStep(span: number): number {
+  if (span >= 200) return 25;
+  if (span >= 100) return 10;
+  if (span >= 40) return 5;
+  if (span >= 10) return 2;
+  return 1;
+}
+
+function yDomain(series: TrendlineSeries[]): [number, number] {
+  const values = series
+    .flatMap((s) => s.points.map((pt) => pt.score))
+    .filter((v): v is number => Number.isFinite(v));
+  if (values.length === 0) return [0, 1];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  // One point, or several identical ones, leaves no span to pad against.
+  const pad = span > 0 ? span * 0.25 : Math.max(Math.abs(max) * 0.1, 1);
+  const step = niceStep(span + pad * 2);
+  // Scores are never negative, so the floor stops at 0 even if that costs
+  // some of the centering on a series that runs close to zero.
+  return [Math.max(0, Math.floor((min - pad) / step) * step), Math.ceil((max + pad) / step) * step];
 }
 
 function ChartLegend({
@@ -195,6 +241,7 @@ export function TrendlineChart({ series, height = 240, onPointClick }: Props) {
   }
 
   const data = mergeData(series);
+  const tickLabels = new Map(data.map((row) => [row._key as string, row._displayDate as string]));
   const hasTrainingPoints = series.some((s) => s.points.some((pt) => pt.source === 'training'));
 
   return (
@@ -203,16 +250,18 @@ export function TrendlineChart({ series, height = 240, onPointClick }: Props) {
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
           <XAxis
-            dataKey="_displayDate"
+            dataKey="_key"
+            tickFormatter={(value: string) => tickLabels.get(value) ?? ''}
             tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={{ stroke: '#1e293b' }}
             tickLine={false}
           />
           <YAxis
+            domain={yDomain(series)}
             tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
-            width={36}
+            width={40}
           />
           <Tooltip content={<MultiTooltip series={series} />} cursor={{ stroke: '#334155' }} />
           <Legend content={(props) => <ChartLegend {...(props as any)} series={series} />} />

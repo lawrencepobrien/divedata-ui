@@ -4,6 +4,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useRoster } from '../hooks/useCoach';
 import { diverKeys } from '../hooks/useDiver';
 import { diversApi } from '../api/diver';
+import { eventPointLabel } from '../lib/competition';
 import type { Discipline, BoardType, TrendlinePoint } from '../types/trendline';
 import type { DiverStats, CompStatEntry } from '../types/stats';
 import { TrendlineChart, type TrendlineSeries, type PointClickInfo } from '../components/charts/TrendlineChart';
@@ -99,7 +100,11 @@ export default function ComparePage(): JSX.Element {
       queryKey: diverKeys.eventTrendline(diverId, discipline),
       queryFn: async ({ signal }: { signal: AbortSignal }): Promise<TrendlinePoint[]> => {
         const data = await diversApi.getEventTrendline(diverId, discipline, undefined, signal);
-        return data.points.map((pt) => ({ date: pt.date, score: pt.score, label: pt.competition }));
+        return data.points.map((pt) => ({
+          date: pt.date,
+          score: pt.score,
+          label: eventPointLabel(pt.competition, pt.event),
+        }));
       },
       staleTime: 5 * 60 * 1000,
     })),
@@ -305,6 +310,10 @@ export default function ComparePage(): JSX.Element {
             ))}
           </div>
         </div>
+        <p className="text-slate-500 text-xs mb-4">
+          Only 6-dive events are shown — totals aren't comparable across formats. A meet's
+          prelim and final count as separate events.
+        </p>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           {isLoadingCharts ? (
             <div className="flex items-center justify-center h-60 text-slate-500 text-sm">Loading…</div>

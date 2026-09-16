@@ -16,6 +16,9 @@ export interface EventTrendline {
   points: Array<{
     date: string | null;
     competition: string;
+    /** dd_dives.competition_event — the full round label, e.g.
+     *  "Men 3m Championship (6 Dives) - (Final)". */
+    event: string;
     score: number;
     dive_count: number;
   }>;

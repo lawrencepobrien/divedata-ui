@@ -237,6 +237,10 @@ export default function DiverTrendlines({ diverId, ownerId, fixedPortfolioId }: 
             ))}
           </div>
         </div>
+        <p className="text-slate-500 text-xs mb-4">
+          Only 6-dive events are shown — totals aren't comparable across formats. A meet's
+          prelim and final count as separate events.
+        </p>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           {loadingEvent ? (
             <div className="flex items-center justify-center h-60 text-slate-500 text-sm">Loading…</div>

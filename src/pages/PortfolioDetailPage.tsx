@@ -11,6 +11,7 @@ import { useRoster } from '../hooks/useCoach';
 import Breadcrumbs, { type Crumb } from '../components/Breadcrumbs';
 import DiverTrendlines from '../components/DiverTrendlines';
 import SharePortfolioButton from '../components/Portfolio/SharePortfolioButton';
+import PortfolioDiveEditor from '../components/Portfolio/PortfolioDiveEditor';
 import type { PortfolioEntry } from '../types/portfolio';
 
 function entryScore(entry: PortfolioEntry): string {
@@ -21,6 +22,10 @@ function entryDate(entry: PortfolioEntry): string | null {
   const iso = entry.summary.dived_at;
   if (!iso) return null;
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function entryDiver(entry: PortfolioEntry): string {
+  return entry.summary.diver_name ?? '—';
 }
 
 function entryHref(entry: PortfolioEntry): string | null {
@@ -79,6 +84,9 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
   const removeEntry = useRemoveEntry(ownerId);
 
   const [tab, setTab] = useState<Tab>('dives');
+  // Edit mode reveals the log-and-add dive interface. Entering it snaps back
+  // to the dives tab — statistics has nothing to edit.
+  const [editing, setEditing] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -88,6 +96,13 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
   const cancelledRenameRef = useRef(false);
 
   const diverId = data?.diver_id;
+  // A coach's own portfolio has no single owning diver, so its rows need to
+  // say who dove each one. Shared portfolios also arrive without a diver_id,
+  // but there the label only earns its place once the entries actually mix.
+  const allEntries = data?.entries ?? [];
+  const mixedDivers =
+    new Set(allEntries.map((e) => e.summary.diver_id).filter(Boolean)).size > 1;
+  const showDiver = mixedDivers || (!shared && !!data && !data.diver_id);
   // The roster route (/roster/:diverId) is keyed by dd_divers.id, distinct
   // from ownerId here (dd_users.id, from /roster/:userId/portfolios/:id) —
   // resolve the diver's roster entry to link back to the right id.
@@ -209,6 +224,19 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
 
             {!shared && (
               <div className="flex items-center gap-4">
+                <button
+                  onClick={() =>
+                    setEditing((e) => {
+                      if (!e) setTab('dives');
+                      return !e;
+                    })
+                  }
+                  className={`text-sm cursor-pointer transition-colors ${
+                    editing ? 'text-cyan-400 hover:text-cyan-300' : 'text-slate-500 hover:text-cyan-400'
+                  }`}
+                >
+                  {editing ? 'Done editing' : 'Edit dives'}
+                </button>
                 {canManage && id && <SharePortfolioButton portfolioId={id} />}
                 {confirmingDelete ? (
                   <div className="flex items-center gap-3 text-sm">
@@ -235,11 +263,22 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
             )}
           </div>
 
+          {editing && id && (
+            <PortfolioDiveEditor
+              portfolioId={id}
+              ownerId={ownerId}
+              diverId={data.diver_id || undefined}
+              entries={data.entries}
+            />
+          )}
+
           {data.entries.length === 0 ? (
             <p className="text-slate-500 text-sm">
               {shared
                 ? 'Nothing in this portfolio yet.'
-                : 'Nothing here yet — add dives and competitions from their detail pages.'}
+                : editing
+                  ? 'Nothing here yet — pick a dive above to add it.'
+                  : 'Nothing here yet — use “Edit dives” to add some.'}
             </p>
           ) : (
             <>
@@ -298,12 +337,26 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
                               {entryDate(entry) && (
                                 <span className="text-slate-500 text-sm">{entryDate(entry)}</span>
                               )}
-                              <span className="text-slate-500 text-sm ml-auto shrink-0">{entryScore(entry)}</span>
+                              {showDiver && (
+                                <span
+                                  title={entryDiver(entry)}
+                                  className="text-slate-400 text-sm truncate ml-auto pl-4 max-w-[45%]"
+                                >
+                                  {entryDiver(entry)}
+                                </span>
+                              )}
+                              <span
+                                className={`text-slate-500 text-sm shrink-0 ${showDiver ? 'pl-4' : 'ml-auto'}`}
+                              >
+                                {entryScore(entry)}
+                              </span>
                             </button>
                             {!shared && (
                               <button
                                 onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
-                                className="absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                className={`absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs transition-opacity cursor-pointer ${
+                                  editing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                }`}
                               >
                                 Remove
                               </button>

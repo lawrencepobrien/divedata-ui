@@ -18,6 +18,8 @@ export interface DiveScoreDetail {
   scores: Scores | null;
   dived_at: string | null;
   competition: string;
+  diver_id: string;
+  diver_name: string;
 }
 
 export interface DiveScore {

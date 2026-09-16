@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { profileApi } from '../api/profile';
@@ -55,7 +56,7 @@ export default function DiveDetailPage() {
         : [
             { label: 'Team', href: '/' },
             {
-              label: rosterDiver?.name ?? 'Diver',
+              label: rosterDiver?.name ?? dive?.diver_name ?? 'Diver',
               href: rosterDiver ? `/roster/${rosterDiver.diver_id}` : '/',
             },
             { label: diveLabel },
@@ -100,22 +101,27 @@ export default function DiveDetailPage() {
                 <span className="text-slate-400 text-lg">{dive.description}</span>
               )}
             </div>
+            {/* Built from a filtered list so the "·" separators can't strand
+                themselves either side of a field the dive doesn't have. */}
             <div className="flex items-center gap-2 text-slate-500 text-sm flex-wrap">
-              {dive.source === 'competition' && dive.competition && (
-                <span>{dive.competition}</span>
-              )}
-              {dive.source === 'competition' && dive.competition && dive.dived_at && (
-                <span>·</span>
-              )}
-              {dive.dived_at && <span>{formatDate(dive.dived_at)}</span>}
-              <span>·</span>
-              <span className="font-mono">{dive.board}</span>
-              {dive.source === 'training' && (
-                <>
-                  <span>·</span>
-                  <span className="text-slate-600">Training</span>
-                </>
-              )}
+              {[
+                dive.diver_name ? (
+                  <span className="text-slate-300 font-medium">{dive.diver_name}</span>
+                ) : null,
+                dive.source === 'competition' && dive.competition ? (
+                  <span>{dive.competition}</span>
+                ) : null,
+                dive.dived_at ? <span>{formatDate(dive.dived_at)}</span> : null,
+                <span className="font-mono">{dive.board}</span>,
+                dive.source === 'training' ? <span className="text-slate-600">Training</span> : null,
+              ]
+                .filter(Boolean)
+                .map((part, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && <span>·</span>}
+                    {part}
+                  </Fragment>
+                ))}
             </div>
           </div>
 

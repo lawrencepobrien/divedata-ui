@@ -51,11 +51,35 @@ function compareValues(a: string | number | null | undefined, b: string | number
   return String(a).localeCompare(String(b));
 }
 
-interface Props {
-  diverId: string;
+/**
+ * Turns the list into a picker: rows file their dive somewhere (a portfolio)
+ * instead of linking through to the dive page, and the Delete column is
+ * replaced by the add/added state.
+ */
+export interface DiveSelection {
+  /** Dive ids already filed — rendered as "Added" and not clickable. */
+  addedIds: Set<string>;
+  onAdd: (diveId: string) => void;
+  /** Dive id currently being added, if any. */
+  pendingId?: string | null;
 }
 
-export default function DiveLogSection({ diverId }: Props): JSX.Element {
+interface Props {
+  diverId: string;
+  title?: string;
+  subtitle?: string;
+  selection?: DiveSelection;
+  /** Called with each dive created through the Log modal. */
+  onDiveLogged?: (diveId: string) => void;
+}
+
+export default function DiveLogSection({
+  diverId,
+  title = 'Dives',
+  subtitle = 'Training and competition dives.',
+  selection,
+  onDiveLogged,
+}: Props): JSX.Element {
   const navigate = useNavigate();
   const { data: trainingDives = [], isLoading: loadingTraining } = useDives(diverId);
   const { data: history = [], isLoading: loadingHistory } = useCompetitionHistory(diverId);
@@ -137,13 +161,14 @@ export default function DiveLogSection({ diverId }: Props): JSX.Element {
   }, [filteredRows, sortKey, sortDir]);
 
   const isLoading = loadingTraining || loadingHistory;
+  const actionColumnClass = selection ? 'w-[64px]' : 'w-[52px]';
 
   return (
     <div className="mt-10">
       <div className="bg-gradient-to-r from-cyan-500/10 to-transparent border border-cyan-900/40 rounded-xl px-5 py-4 mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Dives</h2>
-          <p className="text-slate-400 text-sm">Training and competition dives.</p>
+          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
+          <p className="text-slate-400 text-sm">{subtitle}</p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
@@ -153,7 +178,12 @@ export default function DiveLogSection({ diverId }: Props): JSX.Element {
         </button>
       </div>
 
-      <LogDiveModal diverId={diverId} open={modalOpen} onClose={() => setModalOpen(false)} />
+      <LogDiveModal
+        diverId={diverId}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onDiveLogged={onDiveLogged}
+      />
 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <input
@@ -207,46 +237,71 @@ export default function DiveLogSection({ diverId }: Props): JSX.Element {
                 {sortKey === key && <span className="text-cyan-400">{sortDir === 'asc' ? '▲' : '▼'}</span>}
               </button>
             ))}
-            <span className="w-[52px] shrink-0" aria-hidden="true" />
+            <span className={`${actionColumnClass} shrink-0`} aria-hidden="true" />
           </div>
 
           <div className="divide-y divide-slate-800">
-            {sortedRows.map((row) => (
-              <div
-                key={`${row.source}-${row.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-slate-800/40 transition-colors"
-              >
-                <button
-                  onClick={() => navigate(`/profile/${diverId}/dives/${row.id}`)}
-                  className="flex items-center gap-3 text-left cursor-pointer flex-1 min-w-0"
+            {sortedRows.map((row) => {
+              const isAdded = selection?.addedIds.has(row.id) ?? false;
+              const isAdding = selection?.pendingId === row.id;
+              return (
+                <div
+                  key={`${row.source}-${row.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-800/40 transition-colors"
                 >
-                  <span className="w-24 shrink-0 text-slate-200 text-sm font-mono">{row.diveCode}</span>
-                  <span className="w-16 shrink-0 text-slate-500 text-xs font-mono">{row.board}</span>
-                  <span className="w-28 shrink-0 text-slate-500 text-xs">{formatDate(row.divedAt)}</span>
-                  <span className="flex-1 min-w-0">
-                    {row.source === 'competition' && (
-                      <span className="text-xs text-cyan-400/80 bg-cyan-500/10 rounded-full px-2 py-0.5 truncate max-w-[140px] inline-block">
-                        {row.competitionName}
-                      </span>
+                  <button
+                    onClick={() =>
+                      selection
+                        ? !isAdded && selection.onAdd(row.id)
+                        : navigate(`/profile/${diverId}/dives/${row.id}`)
+                    }
+                    disabled={isAdded}
+                    className={`flex items-center gap-3 text-left flex-1 min-w-0 ${
+                      isAdded ? 'cursor-default opacity-50' : 'cursor-pointer'
+                    }`}
+                  >
+                    <span className="w-24 shrink-0 text-slate-200 text-sm font-mono">{row.diveCode}</span>
+                    <span className="w-16 shrink-0 text-slate-500 text-xs font-mono">{row.board}</span>
+                    <span className="w-28 shrink-0 text-slate-500 text-xs">{formatDate(row.divedAt)}</span>
+                    <span className="flex-1 min-w-0">
+                      {row.source === 'competition' && (
+                        <span className="text-xs text-cyan-400/80 bg-cyan-500/10 rounded-full px-2 py-0.5 truncate max-w-[140px] inline-block">
+                          {row.competitionName}
+                        </span>
+                      )}
+                    </span>
+                    <span className="w-20 shrink-0 text-cyan-400 text-sm font-medium text-right">
+                      {row.totalScore != null ? row.totalScore.toFixed(2) : '—'}
+                    </span>
+                  </button>
+                  <span className={`${actionColumnClass} shrink-0 flex justify-end`}>
+                    {selection ? (
+                      isAdded ? (
+                        <span className="text-cyan-400/70 text-xs">Added ✓</span>
+                      ) : (
+                        <button
+                          onClick={() => selection.onAdd(row.id)}
+                          disabled={isAdding}
+                          className="text-cyan-400 hover:text-cyan-300 text-xs cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {isAdding ? 'Adding…' : '+ Add'}
+                        </button>
+                      )
+                    ) : (
+                      row.source === 'training' && (
+                        <button
+                          onClick={() => deleteDive.mutate(row.id)}
+                          disabled={deleteDive.isPending}
+                          className="text-slate-600 hover:text-rose-400 text-xs cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )
                     )}
                   </span>
-                  <span className="w-20 shrink-0 text-cyan-400 text-sm font-medium text-right">
-                    {row.totalScore != null ? row.totalScore.toFixed(2) : '—'}
-                  </span>
-                </button>
-                <span className="w-[52px] shrink-0 flex justify-end">
-                  {row.source === 'training' && (
-                    <button
-                      onClick={() => deleteDive.mutate(row.id)}
-                      disabled={deleteDive.isPending}
-                      className="text-slate-600 hover:text-rose-400 text-xs cursor-pointer transition-colors disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </span>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

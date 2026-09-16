@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diversApi } from '../api/diver';
+import { eventPointLabel } from '../lib/competition';
 import type { Discipline, BoardType, TrendlinePoint } from '../types/trendline';
 import type { DiverStats } from '../types/stats';
 import type { CompetitionResult } from '../types/history';
@@ -61,7 +62,7 @@ export function useEventTrendline(
       return data.points.map((pt) => ({
         date: pt.date,
         score: pt.score,
-        label: pt.competition,
+        label: eventPointLabel(pt.competition, pt.event),
       }));
     },
     enabled: !!diverId,
