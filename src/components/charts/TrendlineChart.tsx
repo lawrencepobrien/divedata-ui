@@ -23,6 +23,9 @@ export interface PointClickInfo {
   label: string;
   score: number;
   source?: 'competition' | 'training';
+  /** The series' `key` the clicked point belongs to — lets a caller with
+   *  several series (e.g. one per diver being compared) tell them apart. */
+  seriesKey?: string;
 }
 
 interface Props {
@@ -170,6 +173,7 @@ function seriesActiveDot(color: string, seriesKey: string, baseRadius: number, o
             | 'competition'
             | 'training'
             | undefined,
+          seriesKey,
         }) : undefined}
       />
     );

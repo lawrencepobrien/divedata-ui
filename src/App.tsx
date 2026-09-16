@@ -21,6 +21,7 @@ import CoachPortfolios from './pages/CoachPortfolios';
 import SharedWithMe from './pages/SharedWithMe';
 import { useIncomingShares } from './hooks/usePortfolioShare';
 import RosterDiverDetail from './pages/RosterDiverDetail';
+import ComparePage from './pages/ComparePage';
 import CoachProfile from './pages/CoachProfile';
 import CoachRegister from './pages/CoachRegister';
 import InviteClaim from './pages/InviteClaim';
@@ -90,6 +91,7 @@ function App(): JSX.Element {
     ? [
         { label: 'Overview', to: '/', active: pathname === '/' },
         { label: 'My Portfolios', to: '/portfolios', active: pathname.startsWith('/portfolios') },
+        { label: 'Compare', to: '/compare', active: pathname.startsWith('/compare') },
         sharedNavItem,
         { label: 'Register', to: '/register', active: pathname.startsWith('/register') },
         { label: 'Settings', to: '/settings', active: pathname.startsWith('/settings') },
@@ -200,6 +202,7 @@ function App(): JSX.Element {
           <Route path="/register" element={<CoachRegister />} />
           <Route path="/invite/:token" element={<InviteClaim />} />
           <Route path="/portfolios" element={<CoachPortfolios />} />
+          <Route path="/compare" element={<ComparePage />} />
           <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
           <Route path="/shared" element={<SharedWithMe />} />
           <Route path="/shared/:id" element={<PortfolioDetailPage shared />} />
