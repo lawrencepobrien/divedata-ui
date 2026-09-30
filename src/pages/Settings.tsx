@@ -1,39 +1,37 @@
 import { ReactNode, useState } from 'react';
 import { User } from '../types/user';
 import { useUpdateMe } from '../hooks/useUpdateMe';
+import { useDeleteMe } from '../hooks/useDeleteMe';
+import keycloak from '../auth/keycloak';
 
 interface Props {
   user: User | null;
 }
 
 /**
- * Account settings — skeleton. The profile save is wired to a real `/me`
- * mutation; the Keycloak-backed actions (password, sessions, delete) are
- * stubbed at the point where their auth call will go.
+ * Account settings. Profile saves go to `/me`; password changes use Keycloak's
+ * UPDATE_PASSWORD required action; account deletion goes through `DELETE /me`,
+ * which also removes the Keycloak user server-side.
  */
 function Settings({ user }: Props): JSX.Element {
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const updateMe = useUpdateMe();
+  const deleteMe = useDeleteMe();
   const nameDirty = fullName.trim() !== (user?.full_name ?? '').trim();
 
   const handleSaveProfile = () => {
     updateMe.mutate({ full_name: fullName.trim() });
   };
 
-  // ─── Stubs: each is where a real Keycloak call will be wired ───
+  // Hands off to Keycloak's password form, which redirects back here when done.
   const handleChangePassword = () => {
-    // TODO: keycloak.login({ action: 'UPDATE_PASSWORD' }) to open Keycloak's flow.
-  };
-
-  const handleSignOutEverywhere = () => {
-    // TODO: revoke all sessions via Keycloak account REST / backchannel logout.
+    keycloak.login({ action: 'UPDATE_PASSWORD', redirectUri: window.location.href });
   };
 
   const handleDeleteAccount = () => {
-    // TODO: DELETE /me, delete the Keycloak user, then force sign-out.
-    setConfirmingDelete(false);
+    deleteMe.mutate();
   };
 
   return (
@@ -89,10 +87,21 @@ function Settings({ user }: Props): JSX.Element {
           {!confirmingDelete ? (
             <DangerButton onClick={() => setConfirmingDelete(true)}>Delete account</DangerButton>
           ) : (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-300">Are you sure? This can't be undone.</span>
-              <DangerButton onClick={handleDeleteAccount}>Yes, delete</DangerButton>
-              <SecondaryButton onClick={() => setConfirmingDelete(false)}>Cancel</SecondaryButton>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm text-slate-300">Are you sure? This can't be undone.</span>
+                <DangerButton onClick={handleDeleteAccount} disabled={deleteMe.isPending}>
+                  {deleteMe.isPending ? 'Deleting…' : 'Yes, delete'}
+                </DangerButton>
+                <SecondaryButton onClick={() => setConfirmingDelete(false)} disabled={deleteMe.isPending}>
+                  Cancel
+                </SecondaryButton>
+              </div>
+              {deleteMe.isError && (
+                <span className="text-sm text-red-400">
+                  {deleteMe.error instanceof Error ? deleteMe.error.message : 'Delete failed'}
+                </span>
+              )}
             </div>
           )}
         </Section>
@@ -157,16 +166,19 @@ function PrimaryButton({
 
 function SecondaryButton({
   onClick,
+  disabled,
   children,
 }: {
   onClick: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }): JSX.Element {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className="border border-slate-700 hover:border-slate-500 text-slate-200 rounded-lg px-4 py-2.5 text-sm
-                 transition duration-150 cursor-pointer"
+                 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 cursor-pointer"
     >
       {children}
     </button>
@@ -175,16 +187,19 @@ function SecondaryButton({
 
 function DangerButton({
   onClick,
+  disabled,
   children,
 }: {
   onClick: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }): JSX.Element {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className="bg-red-600/90 hover:bg-red-500 text-white font-semibold rounded-lg px-4 py-2.5 text-sm
-                 transition duration-150 cursor-pointer"
+                 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 cursor-pointer"
     >
       {children}
     </button>

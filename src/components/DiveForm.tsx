@@ -161,27 +161,32 @@ export default function DiveForm({
 
         <Field label="Judge scores">
           <div className="flex flex-col gap-2">
-            {judgeScores.map((score, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="10"
-                  value={score}
-                  onChange={(e) => updateJudge(i, e.target.value)}
-                  disabled={hasTotalScore}
-                  className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeJudge(i)}
-                  className="text-slate-600 hover:text-rose-400 text-xs cursor-pointer transition-colors shrink-0"
-                >
-                  Remove
-                </button>
+            {judgeScores.length > 0 && (
+              <div className="grid grid-cols-5 gap-2">
+                {judgeScores.map((score, i) => (
+                  <div key={i} className="relative">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="10"
+                      value={score}
+                      onChange={(e) => updateJudge(i, e.target.value)}
+                      disabled={hasTotalScore}
+                      className={`${inputClass} pl-2 pr-5 text-center disabled:opacity-50 disabled:cursor-not-allowed`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeJudge(i)}
+                      aria-label={`Remove judge ${i + 1}`}
+                      className="absolute top-1/2 -translate-y-1/2 right-1.5 text-slate-600 hover:text-rose-400 text-xs leading-none cursor-pointer transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
             <button
               type="button"
               onClick={addJudge}
