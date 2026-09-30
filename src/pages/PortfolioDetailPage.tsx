@@ -74,10 +74,11 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
   const sharedDetail = useSharedPortfolioDetail(shared ? id : undefined);
   const { data, isLoading, isError } = shared ? sharedDetail : ownDetail;
   const { data: roster = [] } = useRoster(!!ownerId);
-  // The owner can share a portfolio only when viewing it as themself — not
-  // through the coach-manages-a-diver's-portfolio path, and not a shared
-  // (read-only) view of someone else's.
-  const canManage = !ownerId && !shared;
+  // Only the owner edits or shares a portfolio. A coach viewing a roster
+  // diver's (ownerId set) only reaches it because the diver shared it, so
+  // that view is read-only, same as /shared/:id.
+  const readOnly = shared || !!ownerId;
+  const canManage = !readOnly;
 
   const renamePortfolio = useRenamePortfolio(ownerId);
   const deletePortfolio = useDeletePortfolio(ownerId);
@@ -206,7 +207,7 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
             ) : (
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold leading-8">{data.portfolio.name}</h1>
-                {!shared && (
+                {!readOnly && (
                   <button
                     onClick={startRenaming}
                     aria-label="Rename portfolio"
@@ -222,7 +223,7 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
               </div>
             )}
 
-            {!shared && (
+            {!readOnly && (
               <div className="flex items-center gap-4">
                 <button
                   onClick={() =>
@@ -274,7 +275,7 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
 
           {data.entries.length === 0 ? (
             <p className="text-slate-500 text-sm">
-              {shared
+              {readOnly
                 ? 'Nothing in this portfolio yet.'
                 : editing
                   ? 'Nothing here yet — pick a dive above to add it.'
@@ -351,7 +352,7 @@ function PortfolioDetailPage({ shared = false }: Props): JSX.Element {
                                 {entryScore(entry)}
                               </span>
                             </button>
-                            {!shared && (
+                            {!readOnly && (
                               <button
                                 onClick={() => id && removeEntry.mutate({ portfolioId: id, entryId: entry.id })}
                                 className={`absolute top-1/2 -translate-y-1/2 right-5 text-slate-600 hover:text-rose-400 text-xs transition-opacity cursor-pointer ${
