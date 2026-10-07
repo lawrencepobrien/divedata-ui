@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { usePortfolios, useCreatePortfolio } from '../../hooks/usePortfolio';
 
 interface PortfolioGridProps {
+  /** A roster diver's dd_users.id, for a coach's view. The API returns only
+   *  the portfolios that diver has shared with the coach, and the coach can't
+   *  create one in the diver's account, so the grid is read-only. */
   ownerId?: string;
 }
 
@@ -36,7 +39,9 @@ function PortfolioGrid({ ownerId }: PortfolioGridProps): JSX.Element {
     <div>
       {portfolios.length === 0 && !creating && (
         <p className="text-slate-500 text-sm mb-4">
-          No portfolios yet. Create one to start curating your best dives and competitions.
+          {ownerId
+            ? "This diver hasn't shared any portfolios with you yet."
+            : 'No portfolios yet. Create one to start curating your best dives and competitions.'}
         </p>
       )}
 
@@ -63,6 +68,7 @@ function PortfolioGrid({ ownerId }: PortfolioGridProps): JSX.Element {
           </button>
         ))}
 
+        {!ownerId && (
         <div
           className={`flex flex-col justify-center gap-3 border border-dashed rounded-2xl p-6 aspect-[4/3] transition duration-150 ${
             creating ? 'border-slate-700' : 'border-slate-800 hover:border-slate-600'
@@ -101,6 +107,7 @@ function PortfolioGrid({ ownerId }: PortfolioGridProps): JSX.Element {
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );

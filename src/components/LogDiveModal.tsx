@@ -39,14 +39,14 @@ export default function LogDiveModal({ diverId, open, onClose, onDiveLogged }: P
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-50"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center px-4 py-8 z-50"
       onClick={onClose}
     >
       <div
-        className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-2xl p-6"
+        className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-full flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <h2 className="text-xl font-bold">Log</h2>
           <button
             onClick={onClose}
@@ -57,7 +57,7 @@ export default function LogDiveModal({ diverId, open, onClose, onDiveLogged }: P
           </button>
         </div>
 
-        <div role="tablist" className="flex gap-1.5 mb-6 flex-wrap">
+        <div role="tablist" className="flex gap-1.5 px-6 pb-6 flex-wrap shrink-0">
           {MODES.map(({ value, label }) => (
             <button
               key={value}
@@ -76,8 +76,11 @@ export default function LogDiveModal({ diverId, open, onClose, onDiveLogged }: P
         {/* Both forms stay mounted, stacked in the same grid cell, so the
             modal is always as tall as the larger of the two — switching
             modes never snaps the height up or down. The inactive one is
-            hidden with visibility (not display) so it still occupies space. */}
-        <div className="grid">
+            hidden with visibility (not display) so it still occupies space.
+            This area scrolls independently of the header/tabs above so a
+            long judge-score list (or many competition dive rows) never
+            pushes the modal past the viewport. */}
+        <div className="grid px-6 pb-6 overflow-y-auto min-h-0">
           <div className={`col-start-1 row-start-1 ${mode === 'dive' ? '' : 'invisible pointer-events-none'}`}>
             <DiveModeForm diverId={diverId} onDone={onClose} onDiveLogged={onDiveLogged} />
           </div>

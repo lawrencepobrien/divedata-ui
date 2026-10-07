@@ -84,8 +84,10 @@ export default function DiverTrendlines({ diverId, ownerId, fixedPortfolioId }: 
   };
 
   const effectivePortfolioId = fixedPortfolioId ?? (portfolioId || undefined);
+  // The event trendline isn't shown on a portfolio page — a null diverId
+  // disables the query so it isn't fetched for nothing.
   const { data: eventPoints = [], isLoading: loadingEvent } = useEventTrendline(
-    diverId,
+    fixedPortfolioId ? null : diverId,
     discipline,
     effectivePortfolioId,
   );
@@ -218,6 +220,7 @@ export default function DiverTrendlines({ diverId, ownerId, fixedPortfolioId }: 
         </div>
       )}
 
+      {!fixedPortfolioId && (
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Event Trendline</h2>
@@ -253,6 +256,7 @@ export default function DiverTrendlines({ diverId, ownerId, fixedPortfolioId }: 
           )}
         </div>
       </section>
+      )}
 
       <section>
         <div className="flex items-center justify-between mb-4">
